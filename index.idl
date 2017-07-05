@@ -1,30 +1,61 @@
-[meta title:"enwinds-blasty" description:"Short description of your project" /]
-
 [Header
-  title:"enwinds-blasty"
-  subtitle:"Welcome to Literasee, powered by Idyll"
-  author:"bclinkinbeard"
-  authorLink:"https://github.com/bclinkinbeard" /]
+  title:"Nam ut ullamcorper diam"
+  subtitle:"Porro quisquam est qui dolorem ipsum quia dolor"
+  author:"Aristotle Jenkins"
+  authorLink:"http://weirdal.com/" /]
 
-Ugh. Write text
-as you please in here. To add interactivity,
-you can add different components to the text.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim.
 
-Here is how you can use a variable:
+Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti.
 
-[var name:"exampleVar" value: 5 /]
+[aside]
+[var name:`dataToBeCharted` value:`[
+  {x: 0, y: 0.5},
+  {x: 3.5, y: 0.5},
+  {x: 4, y: 0},
+  {x: 4.5, y: 1},
+  {x: 5, y: 0.5},
+  {x: 8, y: 0.5}
+]` /]
+[Chart type:"line" data:dataToBeCharted /]
+[caption]Cras tristique sed diam nec auctor elit.[/caption]
+[/aside]
 
-[Range min:0 max:10 value:exampleVar /]
-[DisplayVar var:exampleVar /]
+# Component: Aside
+The `aside` component allows you to include information or graphcis in the sidebar. Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales.
 
-You can use standard html tags if a
-component with the same name
-doesn't exist.
+Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo.
 
-You can also include code samples.
+# Component: Chart
+Basic charts are included out of the box like we saw in the aside above. Charts can also be included in the main body, like the scatter plot below.
+[Chart type:"scatter" data:dataToBeCharted /]
 
-```js
-function thisIsSoEasy() {
-  return 'Yes. Yes it is.'
-}
-```
+Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus.
+
+Sed non ultricies felis, sed suscipit nisi. Duis vitae ipsum bibendum odio mollis pellentesque. Proin congue risus et metus faucibus, id auctor ligula congue. Integer blandit ligula a eros porta varius. Integer tincidunt tempus nunc, mollis tristique ligula pulvinar id. Phasellus at ornare lacus. Sed eget nunc hendrerit, accumsan nibh sit amet, laoreet nisi. In nisi nunc, vestibulum non elementum eget, faucibus vitae neque. Praesent a luctus purus. Nunc massa enim, facilisis sed nisl rutrum, consectetur efficitur quam. Aenean dolor lectus, eleifend non scelerisque quis, maximus id arcu. In aliquet ultrices ipsum eu ornare. Nullam eget nulla in augue feugiat dapibus. Suspendisse in nisi eros. Aliquam non blandit ex, id dapibus massa. Sed laoreet porttitor mauris eget rutrum.
+
+# Component: Equation
+
+Mathematical equations can also be shown. These equations are powered by [KaTeX](https://github.com/Khan/KaTeX), a modern alternative to LaTeX.
+
+[h2]
+[Equation]
+  y = \int x^2 dx
+[/Equation]
+[/h2]
+
+Nam venenatis rutrum consequat. Praesent commodo, magna id rutrum cursus, nulla nulla porttitor sem, at tincidunt tortor massa id ante. Maecenas efficitur dignissim purus, quis convallis elit tincidunt quis. In porttitor nisl vel nunc mollis, sed aliquam metus semper. Nulla facilisi. Vestibulum mattis nunc non mauris finibus, a accumsan mi ornare. Nulla odio risus, efficitur sit amet hendrerit eget, accumsan ut leo. Aliquam consectetur efficitur condimentum. Vestibulum laoreet massa lectus, id sodales elit tempor eget. Ut pulvinar ante a tortor posuere, sed eleifend diam euismod.
+
+Even complex equations are supported.
+
+[h2]
+[Equation]
+    f(x) = \int
+[/Equation]
+[/h2]
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse leo quam, rhoncus vel neque non, lacinia lobortis nibh. Aenean non nisl erat. Donec a pellentesque felis. Curabitur facilisis commodo quam, et feugiat elit ultrices non. Maecenas ornare urna ac facilisis vehicula. Donec fringilla libero ut eleifend commodo. Sed hendrerit, arcu sed vestibulum varius, sapien tortor molestie leo, at bibendum risus risus ut ipsum.
+
+Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus.
+
+Phasellus laoreet ultrices interdum. Ut hendrerit arcu sed lectus tincidunt, in interdum elit porttitor. Nunc ac fringilla tellus. Pellentesque condimentum pellentesque iaculis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Sed ut quam placerat, luctus lorem at, tempus odio. Praesent et diam ullamcorper, aliquet ligula eu, mattis lacus. Cras gravida molestie neque non hendrerit. Aliquam porttitor magna nibh, ut accumsan ipsum tristique id. In vitae metus sed tellus tempus luctus faucibus sit amet elit.
