@@ -50,7 +50,9 @@ Even complex equations are supported.
 
 [h2]
 [Equation]
-    f(x) = \int
+    f(x) = \int_{-\infty}^\infty
+    \hat f(\xi)\,e^{2 \pi i \xi x}
+    \,d\xi
 [/Equation]
 [/h2]
 
