@@ -50684,7 +50684,1891 @@ module.exports = traverseAllChildren;
 
 module.exports = require('./lib/React');
 
-},{"./lib/React":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/lib/React.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/scrollwatch/dist/ScrollWatch-1.2.0.min.js":[function(require,module,exports){
+},{"./lib/React":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/lib/React.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable.js":[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactableTable = require('./reactable/table');
+
+var _reactableTr = require('./reactable/tr');
+
+var _reactableTd = require('./reactable/td');
+
+var _reactableTh = require('./reactable/th');
+
+var _reactableTfoot = require('./reactable/tfoot');
+
+var _reactableThead = require('./reactable/thead');
+
+var _reactableSort = require('./reactable/sort');
+
+var _reactableUnsafe = require('./reactable/unsafe');
+
+_react2['default'].Children.children = function (children) {
+    return _react2['default'].Children.map(children, function (x) {
+        return x;
+    }) || [];
+};
+
+// Array.prototype.find polyfill - see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
+if (!Array.prototype.find) {
+    Object.defineProperty(Array.prototype, 'find', {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: function value(predicate) {
+            if (this === null) {
+                throw new TypeError('Array.prototype.find called on null or undefined');
+            }
+            if (typeof predicate !== 'function') {
+                throw new TypeError('predicate must be a function');
+            }
+            var list = Object(this);
+            var length = list.length >>> 0;
+            var thisArg = arguments[1];
+            var value;
+            for (var i = 0; i < length; i++) {
+                if (i in list) {
+                    value = list[i];
+                    if (predicate.call(thisArg, value, i, list)) {
+                        return value;
+                    }
+                }
+            }
+            return undefined;
+        }
+    });
+}
+
+var Reactable = { Table: _reactableTable.Table, Tr: _reactableTr.Tr, Td: _reactableTd.Td, Th: _reactableTh.Th, Tfoot: _reactableTfoot.Tfoot, Thead: _reactableThead.Thead, Sort: _reactableSort.Sort, unsafe: _reactableUnsafe.unsafe };
+
+exports['default'] = Reactable;
+
+if (typeof window !== 'undefined') {
+    window.Reactable = Reactable;
+}
+module.exports = exports['default'];
+
+},{"./reactable/sort":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/sort.js","./reactable/table":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/table.js","./reactable/td":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/td.js","./reactable/tfoot":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tfoot.js","./reactable/th":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/th.js","./reactable/thead":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/thead.js","./reactable/tr":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tr.js","./reactable/unsafe":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/unsafe.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/filterer.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactDom = require('react-dom');
+
+var _reactDom2 = _interopRequireDefault(_reactDom);
+
+var FiltererInput = function (_React$Component) {
+    _inherits(FiltererInput, _React$Component);
+
+    function FiltererInput() {
+        _classCallCheck(this, FiltererInput);
+
+        _get(Object.getPrototypeOf(FiltererInput.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(FiltererInput, [{
+        key: 'onChange',
+        value: function onChange() {
+            this.props.onFilter(_reactDom2['default'].findDOMNode(this).value);
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            return _react2['default'].createElement('input', { type: 'text',
+                className: this.props.className,
+                placeholder: this.props.placeholder,
+                value: this.props.value,
+                onKeyUp: this.onChange.bind(this),
+                onChange: this.onChange.bind(this) });
+        }
+    }]);
+
+    return FiltererInput;
+}(_react2['default'].Component);
+
+exports.FiltererInput = FiltererInput;
+;
+
+var Filterer = function (_React$Component2) {
+    _inherits(Filterer, _React$Component2);
+
+    function Filterer() {
+        _classCallCheck(this, Filterer);
+
+        _get(Object.getPrototypeOf(Filterer.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Filterer, [{
+        key: 'render',
+        value: function render() {
+            if (typeof this.props.colSpan === 'undefined') {
+                throw new TypeError('Must pass a colSpan argument to Filterer');
+            }
+
+            return _react2['default'].createElement('tr', { className: 'reactable-filterer' }, _react2['default'].createElement('td', { colSpan: this.props.colSpan }, _react2['default'].createElement(FiltererInput, { onFilter: this.props.onFilter,
+                value: this.props.value,
+                placeholder: this.props.placeholder,
+                className: this.props.className ? 'reactable-filter-input ' + this.props.className : 'reactable-filter-input' })));
+        }
+    }]);
+
+    return Filterer;
+}(_react2['default'].Component);
+
+exports.Filterer = Filterer;
+;
+
+},{"react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js","react-dom":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-dom/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/extract_data_from.js":[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+exports.extractDataFrom = extractDataFrom;
+
+var _stringable = require('./stringable');
+
+function extractDataFrom(key, column) {
+    var value;
+    if (typeof key !== 'undefined' && key !== null && key.__reactableMeta === true) {
+        value = key.data[column];
+    } else {
+        value = key[column];
+    }
+
+    if (typeof value !== 'undefined' && value !== null && value.__reactableMeta === true) {
+        value = typeof value.props.value !== 'undefined' && value.props.value !== null ? value.props.value : value.value;
+    }
+
+    return (0, _stringable.stringable)(value) ? value : '';
+}
+
+},{"./stringable":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/stringable.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js":[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.filterPropsFrom = filterPropsFrom;
+var internalProps = {
+    hideTableHeader: true,
+    column: true,
+    columns: true,
+    sortable: true,
+    filterable: true,
+    filtering: true,
+    onFilter: true,
+    filterPlaceholder: true,
+    filterClassName: true,
+    currentFilter: true,
+    sort: true,
+    sortBy: true,
+    sortableColumns: true,
+    onSort: true,
+    defaultSort: true,
+    defaultSortDescending: true,
+    itemsPerPage: true,
+    filterBy: true,
+    hideFilterInput: true,
+    noDataText: true,
+    currentPage: true,
+    onPageChange: true,
+    previousPageLabel: true,
+    nextPageLabel: true,
+    pageButtonLimit: true,
+    childNode: true,
+    data: true,
+    children: true
+};
+
+function filterPropsFrom(baseProps) {
+    baseProps = baseProps || {};
+    var props = {};
+    for (var key in baseProps) {
+        if (!(key in internalProps)) {
+            props[key] = baseProps[key];
+        }
+    }
+
+    return props;
+}
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/is_react_component.js":[function(require,module,exports){
+// this is a bit hacky - it'd be nice if React exposed an API for this
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+exports.isReactComponent = isReactComponent;
+
+function isReactComponent(thing) {
+    return thing !== null && (typeof thing === 'undefined' ? 'undefined' : _typeof(thing)) === 'object' && typeof thing.props !== 'undefined';
+}
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/stringable.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+exports.stringable = stringable;
+
+function stringable(thing) {
+    return thing !== null && typeof thing !== 'undefined' && _typeof(thing.toString === 'function');
+}
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/to_array.js":[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.toArray = toArray;
+
+function toArray(obj) {
+    var ret = [];
+    for (var attr in obj) {
+        ret[attr] = obj;
+    }
+
+    return ret;
+}
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/paginator.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+function pageHref(num) {
+    return '#page-' + (num + 1);
+}
+
+var Paginator = function (_React$Component) {
+    _inherits(Paginator, _React$Component);
+
+    function Paginator() {
+        _classCallCheck(this, Paginator);
+
+        _get(Object.getPrototypeOf(Paginator.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Paginator, [{
+        key: 'handlePrevious',
+        value: function handlePrevious(e) {
+            e.preventDefault();
+            this.props.onPageChange(this.props.currentPage - 1);
+        }
+    }, {
+        key: 'handleNext',
+        value: function handleNext(e) {
+            e.preventDefault();
+            this.props.onPageChange(this.props.currentPage + 1);
+        }
+    }, {
+        key: 'handlePageButton',
+        value: function handlePageButton(page, e) {
+            e.preventDefault();
+            this.props.onPageChange(page);
+        }
+    }, {
+        key: 'renderPrevious',
+        value: function renderPrevious() {
+            if (this.props.currentPage > 0) {
+                return _react2['default'].createElement('a', { className: 'reactable-previous-page',
+                    href: pageHref(this.props.currentPage - 1),
+                    onClick: this.handlePrevious.bind(this) }, this.props.previousPageLabel || 'Previous');
+            }
+        }
+    }, {
+        key: 'renderNext',
+        value: function renderNext() {
+            if (this.props.currentPage < this.props.numPages - 1) {
+                return _react2['default'].createElement('a', { className: 'reactable-next-page',
+                    href: pageHref(this.props.currentPage + 1),
+                    onClick: this.handleNext.bind(this) }, this.props.nextPageLabel || 'Next');
+            }
+        }
+    }, {
+        key: 'renderPageButton',
+        value: function renderPageButton(className, pageNum) {
+
+            return _react2['default'].createElement('a', { className: className,
+                key: pageNum,
+                href: pageHref(pageNum),
+                onClick: this.handlePageButton.bind(this, pageNum) }, pageNum + 1);
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            if (typeof this.props.colSpan === 'undefined') {
+                throw new TypeError('Must pass a colSpan argument to Paginator');
+            }
+
+            if (typeof this.props.numPages === 'undefined') {
+                throw new TypeError('Must pass a non-zero numPages argument to Paginator');
+            }
+
+            if (typeof this.props.currentPage === 'undefined') {
+                throw new TypeError('Must pass a currentPage argument to Paginator');
+            }
+
+            var pageButtons = [];
+            var pageButtonLimit = this.props.pageButtonLimit;
+            var currentPage = this.props.currentPage;
+            var numPages = this.props.numPages;
+            var lowerHalf = Math.round(pageButtonLimit / 2);
+            var upperHalf = pageButtonLimit - lowerHalf;
+
+            for (var i = 0; i < this.props.numPages; i++) {
+                var showPageButton = false;
+                var pageNum = i;
+                var className = "reactable-page-button";
+                if (currentPage === i) {
+                    className += " reactable-current-page";
+                }
+                pageButtons.push(this.renderPageButton(className, pageNum));
+            }
+
+            if (currentPage - pageButtonLimit + lowerHalf > 0) {
+                if (currentPage > numPages - lowerHalf) {
+                    pageButtons.splice(0, numPages - pageButtonLimit);
+                } else {
+                    pageButtons.splice(0, currentPage - pageButtonLimit + lowerHalf);
+                }
+            }
+
+            if (numPages - currentPage > upperHalf) {
+                pageButtons.splice(pageButtonLimit, pageButtons.length - pageButtonLimit);
+            }
+
+            return _react2['default'].createElement('tbody', { className: 'reactable-pagination' }, _react2['default'].createElement('tr', null, _react2['default'].createElement('td', { colSpan: this.props.colSpan }, this.renderPrevious(), pageButtons, this.renderNext())));
+        }
+    }]);
+
+    return Paginator;
+}(_react2['default'].Component);
+
+exports.Paginator = Paginator;
+;
+
+},{"react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/sort.js":[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+var Sort = {
+    Numeric: function Numeric(a, b) {
+        var valA = parseFloat(a.toString().replace(/,/g, ''));
+        var valB = parseFloat(b.toString().replace(/,/g, ''));
+
+        // Sort non-numeric values alphabetically at the bottom of the list
+        if (isNaN(valA) && isNaN(valB)) {
+            valA = a;
+            valB = b;
+        } else {
+            if (isNaN(valA)) {
+                return 1;
+            }
+            if (isNaN(valB)) {
+                return -1;
+            }
+        }
+
+        if (valA < valB) {
+            return -1;
+        }
+        if (valA > valB) {
+            return 1;
+        }
+
+        return 0;
+    },
+
+    NumericInteger: function NumericInteger(a, b) {
+        if (isNaN(a) || isNaN(b)) {
+            return a > b ? 1 : -1;
+        }
+
+        return a - b;
+    },
+
+    Currency: function Currency(a, b) {
+        // Parse out dollar signs, then do a regular numeric sort
+        a = a.replace(/[^0-9\.\-\,]+/g, '');
+        b = b.replace(/[^0-9\.\-\,]+/g, '');
+
+        return exports.Sort.Numeric(a, b);
+    },
+
+    Date: function (_Date) {
+        function Date(_x, _x2) {
+            return _Date.apply(this, arguments);
+        }
+
+        Date.toString = function () {
+            return _Date.toString();
+        };
+
+        return Date;
+    }(function (a, b) {
+        // Note: this function tries to do a standard javascript string -> date conversion
+        // If you need more control over the date string format, consider using a different
+        // date library and writing your own function
+        var valA = Date.parse(a);
+        var valB = Date.parse(b);
+
+        // Handle non-date values with numeric sort
+        // Sort non-numeric values alphabetically at the bottom of the list
+        if (isNaN(valA) || isNaN(valB)) {
+            return exports.Sort.Numeric(a, b);
+        }
+
+        if (valA > valB) {
+            return 1;
+        }
+        if (valB > valA) {
+            return -1;
+        }
+
+        return 0;
+    }),
+
+    CaseInsensitive: function CaseInsensitive(a, b) {
+        return a.toLowerCase().localeCompare(b.toLowerCase());
+    }
+};
+exports.Sort = Sort;
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/table.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }return target;
+};
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _libFilter_props_from = require('./lib/filter_props_from');
+
+var _libExtract_data_from = require('./lib/extract_data_from');
+
+var _unsafe = require('./unsafe');
+
+var _thead = require('./thead');
+
+var _th = require('./th');
+
+var _tr = require('./tr');
+
+var _tfoot = require('./tfoot');
+
+var _paginator = require('./paginator');
+
+var Table = function (_React$Component) {
+    _inherits(Table, _React$Component);
+
+    function Table(props) {
+        _classCallCheck(this, Table);
+
+        _get(Object.getPrototypeOf(Table.prototype), 'constructor', this).call(this, props);
+
+        this.state = {
+            currentPage: this.props.currentPage ? this.props.currentPage : 0,
+            currentSort: {
+                column: null,
+                direction: this.props.defaultSortDescending ? -1 : 1
+            },
+            filter: ''
+        };
+
+        // Set the state of the current sort to the default sort
+        if (props.sortBy !== false || props.defaultSort !== false) {
+            var sortingColumn = props.sortBy || props.defaultSort;
+            this.state.currentSort = this.getCurrentSort(sortingColumn);
+        }
+    }
+
+    _createClass(Table, [{
+        key: 'filterBy',
+        value: function filterBy(filter) {
+            this.setState({ filter: filter });
+        }
+
+        // Translate a user defined column array to hold column objects if strings are specified
+        // (e.g. ['column1'] => [{key: 'column1', label: 'column1'}])
+    }, {
+        key: 'translateColumnsArray',
+        value: function translateColumnsArray(columns) {
+            return columns.map(function (column, i) {
+                if (typeof column === 'string') {
+                    return {
+                        key: column,
+                        label: column
+                    };
+                } else {
+                    if (typeof column.sortable !== 'undefined') {
+                        var sortFunction = column.sortable === true ? 'default' : column.sortable;
+                        this._sortable[column.key] = sortFunction;
+                    }
+
+                    return column;
+                }
+            }.bind(this));
+        }
+    }, {
+        key: 'parseChildData',
+        value: function parseChildData(props) {
+            var data = [],
+                tfoot = undefined;
+
+            // Transform any children back to a data array
+            if (typeof props.children !== 'undefined') {
+                _react2['default'].Children.forEach(props.children, function (child) {
+                    if (typeof child === 'undefined' || child === null) {
+                        return;
+                    }
+
+                    switch (child.type) {
+                        case _thead.Thead:
+                            break;
+                        case _tfoot.Tfoot:
+                            if (typeof tfoot !== 'undefined') {
+                                console.warn('You can only have one <Tfoot>, but more than one was specified.' + 'Ignoring all but the last one');
+                            }
+                            tfoot = child;
+                            break;
+                        case _tr.Tr:
+                            var childData = child.props.data || {};
+
+                            _react2['default'].Children.forEach(child.props.children, function (descendant) {
+                                // TODO
+                                /* if (descendant.type.ConvenienceConstructor === Td) { */
+                                if ((typeof descendant === 'undefined' ? 'undefined' : _typeof(descendant)) !== 'object' || descendant == null) {
+                                    return;
+                                } else if (typeof descendant.props.column !== 'undefined') {
+                                    var value = undefined;
+
+                                    if (typeof descendant.props.data !== 'undefined') {
+                                        value = descendant.props.data;
+                                    } else if (typeof descendant.props.children !== 'undefined') {
+                                        value = descendant.props.children;
+                                    } else {
+                                        console.warn('exports.Td specified without ' + 'a `data` property or children, ' + 'ignoring');
+                                        return;
+                                    }
+
+                                    childData[descendant.props.column] = {
+                                        value: value,
+                                        props: (0, _libFilter_props_from.filterPropsFrom)(descendant.props),
+                                        __reactableMeta: true
+                                    };
+                                } else {
+                                    console.warn('exports.Td specified without a ' + '`column` property, ignoring');
+                                }
+                            });
+
+                            data.push({
+                                data: childData,
+                                props: (0, _libFilter_props_from.filterPropsFrom)(child.props),
+                                __reactableMeta: true
+                            });
+                            break;
+
+                        default:
+                            console.warn('The only possible children of <Table> are <Thead>, <Tr>, ' + 'or one <Tfoot>.');
+                    }
+                }.bind(this));
+            }
+
+            return { data: data, tfoot: tfoot };
+        }
+    }, {
+        key: 'initialize',
+        value: function initialize(props) {
+            this.data = props.data || [];
+
+            var _parseChildData = this.parseChildData(props);
+
+            var data = _parseChildData.data;
+            var tfoot = _parseChildData.tfoot;
+
+            this.data = this.data.concat(data);
+            this.tfoot = tfoot;
+
+            this.initializeSorts(props);
+            this.initializeFilters(props);
+        }
+    }, {
+        key: 'initializeFilters',
+        value: function initializeFilters(props) {
+            this._filterable = {};
+            // Transform filterable properties into a more friendly list
+            for (var i in props.filterable) {
+                var column = props.filterable[i];
+                var columnName = undefined,
+                    filterFunction = undefined;
+
+                if (column instanceof Object) {
+                    if (typeof column.column !== 'undefined') {
+                        columnName = column.column;
+                    } else {
+                        console.warn('Filterable column specified without column name');
+                        continue;
+                    }
+
+                    if (typeof column.filterFunction === 'function') {
+                        filterFunction = column.filterFunction;
+                    } else {
+                        filterFunction = 'default';
+                    }
+                } else {
+                    columnName = column;
+                    filterFunction = 'default';
+                }
+
+                this._filterable[columnName] = filterFunction;
+            }
+        }
+    }, {
+        key: 'initializeSorts',
+        value: function initializeSorts(props) {
+            this._sortable = {};
+            // Transform sortable properties into a more friendly list
+            for (var i in props.sortable) {
+                var column = props.sortable[i];
+                var columnName = undefined,
+                    sortFunction = undefined;
+
+                if (column instanceof Object) {
+                    if (typeof column.column !== 'undefined') {
+                        columnName = column.column;
+                    } else {
+                        console.warn('Sortable column specified without column name');
+                        return;
+                    }
+
+                    if (typeof column.sortFunction === 'function') {
+                        sortFunction = column.sortFunction;
+                    } else {
+                        sortFunction = 'default';
+                    }
+                } else {
+                    columnName = column;
+                    sortFunction = 'default';
+                }
+
+                this._sortable[columnName] = sortFunction;
+            }
+        }
+    }, {
+        key: 'getCurrentSort',
+        value: function getCurrentSort(column) {
+            var columnName = undefined,
+                sortDirection = undefined;
+
+            if (column instanceof Object) {
+                if (typeof column.column !== 'undefined') {
+                    columnName = column.column;
+                } else {
+                    console.warn('Default column specified without column name');
+                    return;
+                }
+
+                if (typeof column.direction !== 'undefined') {
+                    if (column.direction === 1 || column.direction === 'asc') {
+                        sortDirection = 1;
+                    } else if (column.direction === -1 || column.direction === 'desc') {
+                        sortDirection = -1;
+                    } else {
+                        var defaultDirection = this.props.defaultSortDescending ? 'descending' : 'ascending';
+
+                        console.warn('Invalid default sort specified. Defaulting to ' + defaultDirection);
+                        sortDirection = this.props.defaultSortDescending ? -1 : 1;
+                    }
+                } else {
+                    sortDirection = this.props.defaultSortDescending ? -1 : 1;
+                }
+            } else {
+                columnName = column;
+                sortDirection = this.props.defaultSortDescending ? -1 : 1;
+            }
+
+            return {
+                column: columnName,
+                direction: sortDirection
+            };
+        }
+    }, {
+        key: 'updateCurrentSort',
+        value: function updateCurrentSort(sortBy) {
+            if (sortBy !== false && sortBy.column !== this.state.currentSort.column && sortBy.direction !== this.state.currentSort.direction) {
+
+                this.setState({ currentSort: this.getCurrentSort(sortBy) });
+            }
+        }
+    }, {
+        key: 'updateCurrentPage',
+        value: function updateCurrentPage(nextPage) {
+            if (typeof nextPage !== 'undefined' && nextPage !== this.state.currentPage) {
+                this.setState({ currentPage: nextPage });
+            }
+        }
+    }, {
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            this.initialize(this.props);
+            this.sortByCurrentSort();
+            this.filterBy(this.props.filterBy);
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            this.initialize(nextProps);
+            this.updateCurrentPage(nextProps.currentPage);
+            this.updateCurrentSort(nextProps.sortBy);
+            this.sortByCurrentSort();
+            this.filterBy(nextProps.filterBy);
+        }
+    }, {
+        key: 'applyFilter',
+        value: function applyFilter(filter, children) {
+            // Helper function to apply filter text to a list of table rows
+            filter = filter.toLowerCase();
+            var matchedChildren = [];
+
+            for (var i = 0; i < children.length; i++) {
+                var data = children[i].props.data;
+
+                for (var filterColumn in this._filterable) {
+                    if (typeof data[filterColumn] !== 'undefined') {
+                        // Default filter
+                        if (typeof this._filterable[filterColumn] === 'undefined' || this._filterable[filterColumn] === 'default') {
+                            if ((0, _libExtract_data_from.extractDataFrom)(data, filterColumn).toString().toLowerCase().indexOf(filter) > -1) {
+                                matchedChildren.push(children[i]);
+                                break;
+                            }
+                        } else {
+                            // Apply custom filter
+                            if (this._filterable[filterColumn]((0, _libExtract_data_from.extractDataFrom)(data, filterColumn).toString(), filter)) {
+                                matchedChildren.push(children[i]);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return matchedChildren;
+        }
+    }, {
+        key: 'sortByCurrentSort',
+        value: function sortByCurrentSort() {
+            // Apply a sort function according to the current sort in the state.
+            // This allows us to perform a default sort even on a non sortable column.
+            var currentSort = this.state.currentSort;
+
+            if (currentSort.column === null) {
+                return;
+            }
+
+            this.data.sort(function (a, b) {
+                var keyA = (0, _libExtract_data_from.extractDataFrom)(a, currentSort.column);
+                keyA = (0, _unsafe.isUnsafe)(keyA) ? keyA.toString() : keyA || '';
+                var keyB = (0, _libExtract_data_from.extractDataFrom)(b, currentSort.column);
+                keyB = (0, _unsafe.isUnsafe)(keyB) ? keyB.toString() : keyB || '';
+
+                // Default sort
+                if (typeof this._sortable[currentSort.column] === 'undefined' || this._sortable[currentSort.column] === 'default') {
+
+                    // Reverse direction if we're doing a reverse sort
+                    if (keyA < keyB) {
+                        return -1 * currentSort.direction;
+                    }
+
+                    if (keyA > keyB) {
+                        return 1 * currentSort.direction;
+                    }
+
+                    return 0;
+                } else {
+                    // Reverse columns if we're doing a reverse sort
+                    if (currentSort.direction === 1) {
+                        return this._sortable[currentSort.column](keyA, keyB);
+                    } else {
+                        return this._sortable[currentSort.column](keyB, keyA);
+                    }
+                }
+            }.bind(this));
+        }
+    }, {
+        key: 'onSort',
+        value: function onSort(column) {
+            // Don't perform sort on unsortable columns
+            if (typeof this._sortable[column] === 'undefined') {
+                return;
+            }
+
+            var currentSort = this.state.currentSort;
+
+            if (currentSort.column === column) {
+                currentSort.direction *= -1;
+            } else {
+                currentSort.column = column;
+                currentSort.direction = this.props.defaultSortDescending ? -1 : 1;
+            }
+
+            // Set the current sort and pass it to the sort function
+            this.setState({ currentSort: currentSort });
+            this.sortByCurrentSort();
+
+            if (typeof this.props.onSort === 'function') {
+                this.props.onSort(currentSort);
+            }
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            var _this = this;
+
+            var children = [];
+            var columns = undefined;
+            var userColumnsSpecified = false;
+            var showHeaders = typeof this.props.hideTableHeader === 'undefined';
+
+            var firstChild = null;
+
+            if (this.props.children) {
+                if (this.props.children.length > 0 && this.props.children[0] && this.props.children[0].type === _thead.Thead) {
+                    firstChild = this.props.children[0];
+                } else if (this.props.children.type === _thead.Thead) {
+                    firstChild = this.props.children;
+                }
+            }
+
+            if (firstChild !== null) {
+                columns = _thead.Thead.getColumns(firstChild);
+            } else {
+                columns = this.props.columns || [];
+            }
+
+            if (columns.length > 0) {
+                userColumnsSpecified = true;
+                columns = this.translateColumnsArray(columns);
+            }
+
+            // Build up table rows
+            if (this.data && typeof this.data.map === 'function') {
+                // Build up the columns array
+                children = children.concat(this.data.map(function (rawData, i) {
+                    var data = rawData;
+                    var props = {};
+                    if (rawData.__reactableMeta === true) {
+                        data = rawData.data;
+                        props = rawData.props;
+                    }
+
+                    // Loop through the keys in each data row and build a td for it
+                    for (var k in data) {
+                        if (data.hasOwnProperty(k)) {
+                            // Update the columns array with the data's keys if columns were not
+                            // already specified
+                            if (userColumnsSpecified === false) {
+                                (function () {
+                                    var column = {
+                                        key: k,
+                                        label: k
+                                    };
+
+                                    // Only add a new column if it doesn't already exist in the columns array
+                                    if (columns.find(function (element) {
+                                        return element.key === column.key;
+                                    }) === undefined) {
+                                        columns.push(column);
+                                    }
+                                })();
+                            }
+                        }
+                    }
+
+                    return _react2['default'].createElement(_tr.Tr, _extends({ columns: columns, key: i, data: data }, props));
+                }.bind(this)));
+            }
+
+            if (this.props.sortable === true) {
+                for (var i = 0; i < columns.length; i++) {
+                    this._sortable[columns[i].key] = 'default';
+                }
+            }
+
+            // Determine if we render the filter box
+            var filtering = false;
+            if (this.props.filterable && Array.isArray(this.props.filterable) && this.props.filterable.length > 0 && !this.props.hideFilterInput) {
+                filtering = true;
+            }
+
+            // Apply filters
+            var filteredChildren = children;
+            if (this.state.filter !== '') {
+                filteredChildren = this.applyFilter(this.state.filter, filteredChildren);
+            }
+
+            // Determine pagination properties and which columns to display
+            var itemsPerPage = 0;
+            var pagination = false;
+            var numPages = undefined;
+            var currentPage = this.state.currentPage;
+            var pageButtonLimit = this.props.pageButtonLimit || 10;
+
+            var currentChildren = filteredChildren;
+            if (this.props.itemsPerPage > 0) {
+                itemsPerPage = this.props.itemsPerPage;
+                numPages = Math.ceil(filteredChildren.length / itemsPerPage);
+
+                if (currentPage > numPages - 1) {
+                    currentPage = numPages - 1;
+                }
+
+                pagination = true;
+                currentChildren = filteredChildren.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+            }
+
+            // Manually transfer props
+            var props = (0, _libFilter_props_from.filterPropsFrom)(this.props);
+
+            var noDataText = this.props.noDataText ? _react2['default'].createElement('tr', { className: 'reactable-no-data' }, _react2['default'].createElement('td', { colSpan: columns.length }, this.props.noDataText)) : null;
+
+            var tableHeader = null;
+            if (columns && columns.length > 0 && showHeaders) {
+                tableHeader = _react2['default'].createElement(_thead.Thead, { columns: columns,
+                    filtering: filtering,
+                    onFilter: function onFilter(filter) {
+                        _this.setState({ filter: filter });
+                        if (_this.props.onFilter) {
+                            _this.props.onFilter(filter);
+                        }
+                    },
+                    filterPlaceholder: this.props.filterPlaceholder,
+                    filterClassName: this.props.filterClassName,
+                    currentFilter: this.state.filter,
+                    sort: this.state.currentSort,
+                    sortableColumns: this._sortable,
+                    onSort: this.onSort.bind(this),
+                    key: 'thead' });
+            }
+            return _react2['default'].createElement('table', props, tableHeader, _react2['default'].createElement('tbody', { className: 'reactable-data', key: 'tbody' }, currentChildren.length > 0 ? currentChildren : noDataText), pagination === true ? _react2['default'].createElement(_paginator.Paginator, { colSpan: columns.length,
+                pageButtonLimit: pageButtonLimit,
+                numPages: numPages,
+                currentPage: currentPage,
+                onPageChange: function onPageChange(page) {
+                    _this.setState({ currentPage: page });
+                    if (_this.props.onPageChange) {
+                        _this.props.onPageChange(page);
+                    }
+                },
+                previousPageLabel: this.props.previousPageLabel,
+                nextPageLabel: this.props.nextPageLabel,
+                key: 'paginator' }) : null, this.tfoot);
+        }
+    }]);
+
+    return Table;
+}(_react2['default'].Component);
+
+exports.Table = Table;
+
+Table.defaultProps = {
+    sortBy: false,
+    defaultSort: false,
+    defaultSortDescending: false,
+    itemsPerPage: 0,
+    filterBy: '',
+    hideFilterInput: false
+};
+
+},{"./lib/extract_data_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/extract_data_from.js","./lib/filter_props_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js","./paginator":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/paginator.js","./tfoot":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tfoot.js","./th":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/th.js","./thead":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/thead.js","./tr":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tr.js","./unsafe":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/unsafe.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/td.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }return target;
+};
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _libIs_react_component = require('./lib/is_react_component');
+
+var _libStringable = require('./lib/stringable');
+
+var _unsafe = require('./unsafe');
+
+var _libFilter_props_from = require('./lib/filter_props_from');
+
+var Td = function (_React$Component) {
+    _inherits(Td, _React$Component);
+
+    function Td() {
+        _classCallCheck(this, Td);
+
+        _get(Object.getPrototypeOf(Td.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Td, [{
+        key: 'stringifyIfNotReactComponent',
+        value: function stringifyIfNotReactComponent(object) {
+            if (!(0, _libIs_react_component.isReactComponent)(object) && (0, _libStringable.stringable)(object) && typeof object !== 'undefined') {
+                return object.toString();
+            }
+            return null;
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            // Attach any properties on the column to this Td object to allow things like custom event handlers
+            var mergedProps = (0, _libFilter_props_from.filterPropsFrom)(this.props);
+            if (_typeof(this.props.column) === 'object') {
+                for (var key in this.props.column) {
+                    if (key !== 'key' && key !== 'name') {
+                        mergedProps[key] = this.props.column[key];
+                    }
+                }
+            }
+            // handleClick aliases onClick event
+            mergedProps.onClick = this.props.handleClick;
+
+            var stringifiedChildProps;
+
+            if (typeof this.props.data === 'undefined') {
+                stringifiedChildProps = this.stringifyIfNotReactComponent(this.props.children);
+            }
+
+            if ((0, _unsafe.isUnsafe)(this.props.children)) {
+                return _react2['default'].createElement('td', _extends({}, mergedProps, {
+                    dangerouslySetInnerHTML: { __html: this.props.children.toString() } }));
+            } else {
+                return _react2['default'].createElement('td', mergedProps, stringifiedChildProps || this.props.children);
+            }
+        }
+    }]);
+
+    return Td;
+}(_react2['default'].Component);
+
+exports.Td = Td;
+;
+
+},{"./lib/filter_props_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js","./lib/is_react_component":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/is_react_component.js","./lib/stringable":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/stringable.js","./unsafe":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/unsafe.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tfoot.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var Tfoot = function (_React$Component) {
+    _inherits(Tfoot, _React$Component);
+
+    function Tfoot() {
+        _classCallCheck(this, Tfoot);
+
+        _get(Object.getPrototypeOf(Tfoot.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Tfoot, [{
+        key: 'render',
+        value: function render() {
+            return _react2['default'].createElement('tfoot', this.props);
+        }
+    }]);
+
+    return Tfoot;
+}(_react2['default'].Component);
+
+exports.Tfoot = Tfoot;
+
+},{"react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/th.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }return target;
+};
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _unsafe = require('./unsafe');
+
+var _libFilter_props_from = require('./lib/filter_props_from');
+
+var Th = function (_React$Component) {
+    _inherits(Th, _React$Component);
+
+    function Th() {
+        _classCallCheck(this, Th);
+
+        _get(Object.getPrototypeOf(Th.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Th, [{
+        key: 'render',
+        value: function render() {
+            var childProps = undefined;
+
+            if ((0, _unsafe.isUnsafe)(this.props.children)) {
+                return _react2['default'].createElement('th', _extends({}, (0, _libFilter_props_from.filterPropsFrom)(this.props), {
+                    dangerouslySetInnerHTML: { __html: this.props.children.toString() } }));
+            } else {
+                return _react2['default'].createElement('th', (0, _libFilter_props_from.filterPropsFrom)(this.props), this.props.children);
+            }
+        }
+    }]);
+
+    return Th;
+}(_react2['default'].Component);
+
+exports.Th = Th;
+;
+
+},{"./lib/filter_props_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js","./unsafe":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/unsafe.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/thead.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }return target;
+};
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _th = require('./th');
+
+var _filterer = require('./filterer');
+
+var _libFilter_props_from = require('./lib/filter_props_from');
+
+var Thead = function (_React$Component) {
+    _inherits(Thead, _React$Component);
+
+    function Thead() {
+        _classCallCheck(this, Thead);
+
+        _get(Object.getPrototypeOf(Thead.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Thead, [{
+        key: 'handleClickTh',
+        value: function handleClickTh(column) {
+            this.props.onSort(column.key);
+        }
+    }, {
+        key: 'handleKeyDownTh',
+        value: function handleKeyDownTh(column, event) {
+            if (event.keyCode === 13) {
+                this.props.onSort(column.key);
+            }
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            // Declare the list of Ths
+            var Ths = [];
+            for (var index = 0; index < this.props.columns.length; index++) {
+                var column = this.props.columns[index];
+                var thClass = 'reactable-th-' + column.key.replace(/\s+/g, '-').toLowerCase();
+                var sortClass = '';
+                var thRole = null;
+
+                if (this.props.sortableColumns[column.key]) {
+                    sortClass += 'reactable-header-sortable ';
+                    thRole = 'button';
+                }
+
+                if (this.props.sort.column === column.key) {
+                    sortClass += 'reactable-header-sort';
+                    if (this.props.sort.direction === 1) {
+                        sortClass += '-asc';
+                    } else {
+                        sortClass += '-desc';
+                    }
+                }
+
+                if (sortClass.length > 0) {
+                    thClass += ' ' + sortClass;
+                }
+
+                if (_typeof(column.props) === 'object' && typeof column.props.className === 'string') {
+                    thClass += ' ' + column.props.className;
+                }
+
+                Ths.push(_react2['default'].createElement(_th.Th, _extends({}, column.props, {
+                    className: thClass,
+                    key: index,
+                    onClick: this.handleClickTh.bind(this, column),
+                    onKeyDown: this.handleKeyDownTh.bind(this, column),
+                    role: thRole,
+                    tabIndex: '0' }), column.label));
+            }
+
+            // Manually transfer props
+            var props = (0, _libFilter_props_from.filterPropsFrom)(this.props);
+
+            return _react2['default'].createElement('thead', props, this.props.filtering === true ? _react2['default'].createElement(_filterer.Filterer, {
+                colSpan: this.props.columns.length,
+                onFilter: this.props.onFilter,
+                placeholder: this.props.filterPlaceholder,
+                value: this.props.currentFilter,
+                className: this.props.filterClassName
+            }) : null, _react2['default'].createElement('tr', { className: 'reactable-column-header' }, Ths));
+        }
+    }], [{
+        key: 'getColumns',
+        value: function getColumns(component) {
+            // Can't use React.Children.map since that doesn't return a proper array
+            var columns = [];
+            _react2['default'].Children.forEach(component.props.children, function (th) {
+                var column = {};
+                if (typeof th.props !== 'undefined') {
+                    column.props = (0, _libFilter_props_from.filterPropsFrom)(th.props);
+
+                    // use the content as the label & key
+                    if (typeof th.props.children !== 'undefined') {
+                        column.label = th.props.children;
+                        column.key = column.label;
+                    }
+
+                    // the key in the column attribute supersedes the one defined previously
+                    if (typeof th.props.column === 'string') {
+                        column.key = th.props.column;
+
+                        // in case we don't have a label yet
+                        if (typeof column.label === 'undefined') {
+                            column.label = column.key;
+                        }
+                    }
+                }
+
+                if (typeof column.key === 'undefined') {
+                    throw new TypeError('<th> must have either a "column" property or a string ' + 'child');
+                } else {
+                    columns.push(column);
+                }
+            });
+
+            return columns;
+        }
+    }]);
+
+    return Thead;
+}(_react2['default'].Component);
+
+exports.Thead = Thead;
+;
+
+},{"./filterer":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/filterer.js","./lib/filter_props_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js","./th":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/th.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/tr.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }return target;
+};
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _get = function get(_x, _x2, _x3) {
+    var _again = true;_function: while (_again) {
+        var object = _x,
+            property = _x2,
+            receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
+            var parent = Object.getPrototypeOf(object);if (parent === null) {
+                return undefined;
+            } else {
+                _x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
+            }
+        } else if ('value' in desc) {
+            return desc.value;
+        } else {
+            var getter = desc.get;if (getter === undefined) {
+                return undefined;
+            }return getter.call(receiver);
+        }
+    }
+};
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+}
+
+function _objectWithoutProperties(obj, keys) {
+    var target = {};for (var i in obj) {
+        if (keys.indexOf(i) >= 0) continue;if (!Object.prototype.hasOwnProperty.call(obj, i)) continue;target[i] = obj[i];
+    }return target;
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError('Cannot call a class as a function');
+    }
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== 'function' && superClass !== null) {
+        throw new TypeError('Super expression must either be null or a function, not ' + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _td = require('./td');
+
+var _libTo_array = require('./lib/to_array');
+
+var _libFilter_props_from = require('./lib/filter_props_from');
+
+var Tr = function (_React$Component) {
+    _inherits(Tr, _React$Component);
+
+    function Tr() {
+        _classCallCheck(this, Tr);
+
+        _get(Object.getPrototypeOf(Tr.prototype), 'constructor', this).apply(this, arguments);
+    }
+
+    _createClass(Tr, [{
+        key: 'render',
+        value: function render() {
+            var children = (0, _libTo_array.toArray)(_react2['default'].Children.children(this.props.children));
+
+            if (this.props.data && this.props.columns && typeof this.props.columns.map === 'function') {
+                if (typeof children.concat === 'undefined') {
+                    console.log(children);
+                }
+
+                children = children.concat(this.props.columns.map(function (_ref, i) {
+                    var _ref$props = _ref.props;
+                    var props = _ref$props === undefined ? {} : _ref$props;
+
+                    var column = _objectWithoutProperties(_ref, ['props']);
+
+                    if (this.props.data.hasOwnProperty(column.key)) {
+                        var value = this.props.data[column.key];
+
+                        if (typeof value !== 'undefined' && value !== null && value.__reactableMeta === true) {
+                            props = value.props;
+                            value = value.value;
+                        }
+
+                        return _react2['default'].createElement(_td.Td, _extends({ column: column, key: column.key }, props), value);
+                    } else {
+                        return _react2['default'].createElement(_td.Td, { column: column, key: column.key });
+                    }
+                }.bind(this)));
+            }
+
+            // Manually transfer props
+            var props = (0, _libFilter_props_from.filterPropsFrom)(this.props);
+
+            return _react2['default'].DOM.tr(props, children);
+        }
+    }]);
+
+    return Tr;
+}(_react2['default'].Component);
+
+exports.Tr = Tr;
+;
+
+Tr.childNode = _td.Td;
+Tr.dataType = 'object';
+
+},{"./lib/filter_props_from":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/filter_props_from.js","./lib/to_array":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/lib/to_array.js","./td":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/td.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable/unsafe.js":[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+exports.unsafe = unsafe;
+exports.isUnsafe = isUnsafe;
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+
+var Unsafe = function () {
+    function Unsafe(content) {
+        _classCallCheck(this, Unsafe);
+
+        this.content = content;
+    }
+
+    _createClass(Unsafe, [{
+        key: "toString",
+        value: function toString() {
+            return this.content;
+        }
+    }]);
+
+    return Unsafe;
+}();
+
+function unsafe(str) {
+    return new Unsafe(str);
+}
+
+;
+
+function isUnsafe(obj) {
+    return obj instanceof Unsafe;
+}
+
+;
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/scrollwatch/dist/ScrollWatch-1.2.0.min.js":[function(require,module,exports){
 "use strict";
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -63093,10 +64977,87 @@ function wrappy(fn, cb) {
   }
 }
 
-},{}],"__IDYLL_AST__":[function(require,module,exports){
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/tmp/bclinkinbeard/idyll-components-demo/components/complaints-table.js":[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var React = require('react');
+var IdyllComponent = require('idyll-component');
+var Reactable = require('reactable');
+var Table = Reactable.Table;
+var Tr = Reactable.Tr;
+var Td = Reactable.Td;
+
+var TableComponent = function (_IdyllComponent) {
+  _inherits(TableComponent, _IdyllComponent);
+
+  function TableComponent() {
+    _classCallCheck(this, TableComponent);
+
+    return _possibleConstructorReturn(this, (TableComponent.__proto__ || Object.getPrototypeOf(TableComponent)).apply(this, arguments));
+  }
+
+  _createClass(TableComponent, [{
+    key: 'render',
+    value: function render() {
+      var data = this.props.data.map(function (d) {
+        return {
+          'company': d.key,
+          'totalComplaints': d.values.totalComplaints,
+          'percentTimelyResponse': Math.round(d.values.percentTimelyResponse * 100 * 10) / 10,
+          'percentCustomerDisputed': Math.round(d.values.percentCustomerDisputed * 100 * 10) / 10,
+          'topIssue': d.values.topIssue
+        };
+      });
+      return React.createElement(
+        Table,
+        { className: 'table' },
+        data.map(function (d, i) {
+          return React.createElement(
+            Tr,
+            { key: i },
+            React.createElement(
+              Td,
+              { column: 'Company' },
+              d.company
+            ),
+            React.createElement(
+              Td,
+              { column: 'Most Frequent Issue' },
+              d.topIssue
+            ),
+            React.createElement(
+              Td,
+              { column: 'Total Complaints', className: 'number' },
+              d.totalComplaints
+            ),
+            React.createElement(
+              Td,
+              { column: '% Timely Response', className: 'number' },
+              d.percentTimelyResponse
+            )
+          );
+        })
+      );
+    }
+  }]);
+
+  return TableComponent;
+}(IdyllComponent);
+
+module.exports = TableComponent;
+
+},{"idyll-component":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js","reactable":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/reactable/lib/reactable.js"}],"__IDYLL_AST__":[function(require,module,exports){
 "use strict";
 
-module.exports = [["Header", [["title", ["value", "Component: Header"]], ["subtitle", ["value", "This title, subtitle, and byline are created using the code below"]], ["author", ["value", "Aristotle Jenkins"]], ["authorLink", ["value", "http://weirdal.com/"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim."]], ["pre", [], [["code", [], ["[Header\n  title:\"Component: Header\"\n  subtitle:\"This title, subtitle, and byline are created using the Header component\"\n  author:\"Aristotle Jenkins\"\n  authorLink:\"http://weirdal.com/\" /]"]]]], ["p", [], ["Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti."]], ["aside", [], [["div", [], [["var", [["name", ["expression", "dataToBeCharted"]], ["value", ["expression", "[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n]"]]], []], ["Chart", [["type", ["value", "line"]], ["data", ["variable", "dataToBeCharted"]]], []], ["caption", [], ["Cras tristique sed diam nec auctor elit."]]]]]], ["h1", [], ["Component: Aside"]], ["p", [], ["The ", ["code", [], ["aside"]], " component allows you to include information or graphcis in the sidebar. The code for that chart can be seen here:"]], ["pre", [], [["code", [], ["[var name:dataToBeCharted value:[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n] /]\n[Chart type:\"line\" data:dataToBeCharted /]"]]]], ["p", [], ["Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales."]], ["p", [], ["Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo."]], ["h1", [], ["Component: Chart"]], ["p", [], ["Basic charts are included out of the box like we saw in the aside above. Charts can also be included in the main body, like the scatter plot below.", ["Chart", [["type", ["value", "scatter"]], ["data", ["variable", "dataToBeCharted"]]], []]]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["p", [], ["Sed non ultricies felis, sed suscipit nisi. Duis vitae ipsum bibendum odio mollis pellentesque. Proin congue risus et metus faucibus, id auctor ligula congue. Integer blandit ligula a eros porta varius. Integer tincidunt tempus nunc, mollis tristique ligula pulvinar id. Phasellus at ornare lacus. Sed eget nunc hendrerit, accumsan nibh sit amet, laoreet nisi. In nisi nunc, vestibulum non elementum eget, faucibus vitae neque. Praesent a luctus purus. Nunc massa enim, facilisis sed nisl rutrum, consectetur efficitur quam. Aenean dolor lectus, eleifend non scelerisque quis, maximus id arcu. In aliquet ultrices ipsum eu ornare. Nullam eget nulla in augue feugiat dapibus. Suspendisse in nisi eros. Aliquam non blandit ex, id dapibus massa. Sed laoreet porttitor mauris eget rutrum."]], ["h1", [], ["Component: Equation"]], ["p", [], ["Mathematical equations can also be shown. These equations are powered by ", ["a", [["href", ["value", "https://github.com/Khan/KaTeX"]]], ["KaTeX"]], ", a modern alternative to LaTeX."]], ["h2", [], [["Equation", [], ["\n  y = \\int x^2 dx"]]]], ["p", [], ["Nam venenatis rutrum consequat. Praesent commodo, magna id rutrum cursus, nulla nulla porttitor sem, at tincidunt tortor massa id ante. Maecenas efficitur dignissim purus, quis convallis elit tincidunt quis. In porttitor nisl vel nunc mollis, sed aliquam metus semper. Nulla facilisi. Vestibulum mattis nunc non mauris finibus, a accumsan mi ornare. Nulla odio risus, efficitur sit amet hendrerit eget, accumsan ut leo. Aliquam consectetur efficitur condimentum. Vestibulum laoreet massa lectus, id sodales elit tempor eget. Ut pulvinar ante a tortor posuere, sed eleifend diam euismod."]], ["p", [], ["Even complex equations are supported."]], ["h2", [], [["Equation", [], ["\n    f(x) = \\int_{-\\infty}^\\infty\n    \\hat f(\\xi)\\,e^{2 \\pi i \\xi x}\n    \\,d\\xi"]]]], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse leo quam, rhoncus vel neque non, lacinia lobortis nibh. Aenean non nisl erat. Donec a pellentesque felis. Curabitur facilisis commodo quam, et feugiat elit ultrices non. Maecenas ornare urna ac facilisis vehicula. Donec fringilla libero ut eleifend commodo. Sed hendrerit, arcu sed vestibulum varius, sapien tortor molestie leo, at bibendum risus risus ut ipsum."]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["h1", [], ["Component: SVG"]], ["p", [], ["You can display SVGs directly in your page."]], ["SVG", [["src", ["value", "/public/img/thumb.svg"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam quis dolor sit amet nulla eleifend porta. Nunc nec nunc a erat commodo pellentesque. Maecenas iaculis ac urna ac viverra. Pellentesque consectetur rhoncus tempus. Integer eget velit at tellus scelerisque scelerisque quis vitae elit. Cras efficitur condimentum ipsum quis bibendum. Suspendisse porttitor rutrum lorem. Nullam vehicula ligula dolor, a blandit nisl gravida id. Phasellus et sem dignissim, lacinia nulla et, dignissim felis. Maecenas viverra quam eget quam dapibus, eget euismod urna maximus. Nam in pretium diam. Integer ornare laoreet justo. Mauris orci velit, tincidunt a consequat ut, sollicitudin nec leo. Sed ornare orci eros, volutpat venenatis dui ultrices eget. Etiam fringilla volutpat nulla, quis imperdiet urna scelerisque in. Ut neque nisi, placerat ut enim a, vehicula cursus tellus."]], ["h1", [], ["Component: Table"]], ["p", [], ["You can even include data tables. This one has some custom styling applied but the basic functionality is available out of the box."]], ["p", [], ["Maecenas molestie diam in velit ornare faucibus. Nam vitae dignissim massa, vitae mollis nunc. Vivamus tempus, arcu vitae aliquet sollicitudin, dui ligula lacinia nulla, eu ultricies nisi lectus condimentum libero. Ut eleifend purus laoreet tincidunt elementum. Ut rutrum porttitor orci, id pellentesque quam posuere at. Morbi in lectus quis enim suscipit luctus. Integer elementum ultrices nisl, placerat dapibus purus cursus et. Etiam condimentum libero eget diam porta consequat. Praesent efficitur scelerisque pretium. Sed dapibus eget sapien ac placerat. Proin sit amet ligula felis. Nulla facilisi. Aenean et fringilla ligula, nec porttitor turpis."]], ["p", [], ["Fusce molestie blandit laoreet. Nam tincidunt dictum turpis vel suscipit. Cras quis convallis mi, eu facilisis justo. Nunc luctus, arcu tristique congue gravida, tortor diam condimentum nisi, in pharetra sapien dolor id dui. Quisque lectus odio, hendrerit ultrices ornare eu, rhoncus non augue. Nullam at porttitor mi, at luctus ipsum. Aenean vulputate augue sed nisl condimentum, non pharetra justo tincidunt. Nam ullamcorper interdum porta. In viverra felis nisl, vitae aliquet tellus facilisis sit amet. Quisque accumsan pretium tincidunt."]], ["p", [], ["Integer faucibus sapien in massa fringilla, semper eleifend dolor finibus. Cras volutpat fringilla nisl molestie suscipit. Quisque ac nisl sed ligula porttitor aliquam. Etiam vulputate sapien et fermentum sodales. Aliquam ante ex, euismod ac quam non, maximus varius libero. In sollicitudin turpis lectus, mollis elementum elit blandit eu. Ut consectetur odio sit amet odio aliquam pulvinar. Maecenas posuere, felis scelerisque eleifend dapibus, orci arcu dignissim nulla, a eleifend arcu elit in eros. Maecenas tristique imperdiet ante. Etiam orci risus, blandit ut fermentum sed, cursus ut dolor. Maecenas a porttitor ex. Donec vel libero in libero rhoncus placerat. Aliquam erat volutpat. Fusce efficitur consectetur felis, sit amet elementum libero volutpat a. Vivamus nec neque ullamcorper magna eleifend ullamcorper non a mi. Ut odio libero, aliquam ut convallis quis, pretium vel metus."]], ["p", [], ["Donec vitae dapibus nunc, a faucibus turpis. Suspendisse mattis diam id ante sagittis vestibulum. Fusce porttitor felis in arcu elementum, quis luctus lacus varius. Donec consectetur ultrices eros in interdum. Aliquam et eros sed turpis egestas congue ut tincidunt est. Curabitur sagittis nisi ac ex porta dignissim. Donec eget sollicitudin risus. Fusce mattis pellentesque felis, quis sagittis nulla vulputate convallis. Phasellus eu mollis nulla. Mauris commodo, odio sit amet dignissim maximus, ipsum ex bibendum est, vel tincidunt nisl libero vel ex. Fusce enim tellus, sodales eget odio sed, suscipit blandit urna. Nam aliquam bibendum tincidunt. Sed metus nulla, interdum eget cursus eu, rhoncus ut neque."]], ["p", [], ["Phasellus laoreet ultrices interdum. Ut hendrerit arcu sed lectus tincidunt, in interdum elit porttitor. Nunc ac fringilla tellus. Pellentesque condimentum pellentesque iaculis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Sed ut quam placerat, luctus lorem at, tempus odio. Praesent et diam ullamcorper, aliquet ligula eu, mattis lacus. Cras gravida molestie neque non hendrerit. Aliquam porttitor magna nibh, ut accumsan ipsum tristique id. In vitae metus sed tellus tempus luctus faucibus sit amet elit."]]];
+module.exports = [["Header", [["title", ["value", "Component: Header"]], ["subtitle", ["value", "This title, subtitle, and byline are created using the code below"]], ["author", ["value", "Aristotle Jenkins"]], ["authorLink", ["value", "http://weirdal.com/"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim."]], ["pre", [], [["code", [], ["[Header\n  title:\"Component: Header\"\n  subtitle:\"This title, subtitle, and byline are created using the Header component\"\n  author:\"Aristotle Jenkins\"\n  authorLink:\"http://weirdal.com/\" /]"]]]], ["p", [], ["Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti."]], ["aside", [], [["div", [], [["var", [["name", ["expression", "dataToBeCharted"]], ["value", ["expression", "[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n]"]]], []], ["Chart", [["type", ["value", "line"]], ["data", ["variable", "dataToBeCharted"]]], []], ["caption", [], ["Cras tristique sed diam nec auctor elit."]]]]]], ["h1", [], ["Component: Aside"]], ["p", [], ["The ", ["code", [], ["aside"]], " component allows you to include information or graphcis in the sidebar. The code for that chart can be seen here:"]], ["pre", [], [["code", [], ["[var name:dataToBeCharted value:[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n] /]\n[Chart type:\"line\" data:dataToBeCharted /]"]]]], ["p", [], ["Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales."]], ["p", [], ["Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo."]], ["h1", [], ["Component: Chart"]], ["p", [], ["Basic charts are included out of the box like we saw in the aside above. Charts can also be included in the main body, like the scatter plot below.", ["Chart", [["type", ["value", "scatter"]], ["data", ["variable", "dataToBeCharted"]]], []]]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["p", [], ["Sed non ultricies felis, sed suscipit nisi. Duis vitae ipsum bibendum odio mollis pellentesque. Proin congue risus et metus faucibus, id auctor ligula congue. Integer blandit ligula a eros porta varius. Integer tincidunt tempus nunc, mollis tristique ligula pulvinar id. Phasellus at ornare lacus. Sed eget nunc hendrerit, accumsan nibh sit amet, laoreet nisi. In nisi nunc, vestibulum non elementum eget, faucibus vitae neque. Praesent a luctus purus. Nunc massa enim, facilisis sed nisl rutrum, consectetur efficitur quam. Aenean dolor lectus, eleifend non scelerisque quis, maximus id arcu. In aliquet ultrices ipsum eu ornare. Nullam eget nulla in augue feugiat dapibus. Suspendisse in nisi eros. Aliquam non blandit ex, id dapibus massa. Sed laoreet porttitor mauris eget rutrum."]], ["h1", [], ["Component: Equation"]], ["p", [], ["Mathematical equations can also be shown. These equations are powered by ", ["a", [["href", ["value", "https://github.com/Khan/KaTeX"]]], ["KaTeX"]], ", a modern alternative to LaTeX."]], ["h2", [], [["Equation", [], ["\n  y = \\int x^2 dx"]]]], ["p", [], ["Nam venenatis rutrum consequat. Praesent commodo, magna id rutrum cursus, nulla nulla porttitor sem, at tincidunt tortor massa id ante. Maecenas efficitur dignissim purus, quis convallis elit tincidunt quis. In porttitor nisl vel nunc mollis, sed aliquam metus semper. Nulla facilisi. Vestibulum mattis nunc non mauris finibus, a accumsan mi ornare. Nulla odio risus, efficitur sit amet hendrerit eget, accumsan ut leo. Aliquam consectetur efficitur condimentum. Vestibulum laoreet massa lectus, id sodales elit tempor eget. Ut pulvinar ante a tortor posuere, sed eleifend diam euismod."]], ["p", [], ["Even complex equations are supported."]], ["h2", [], [["Equation", [], ["\n    f(x) = \\int_{-\\infty}^\\infty\n    \\hat f(\\xi)\\,e^{2 \\pi i \\xi x}\n    \\,d\\xi"]]]], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse leo quam, rhoncus vel neque non, lacinia lobortis nibh. Aenean non nisl erat. Donec a pellentesque felis. Curabitur facilisis commodo quam, et feugiat elit ultrices non. Maecenas ornare urna ac facilisis vehicula. Donec fringilla libero ut eleifend commodo. Sed hendrerit, arcu sed vestibulum varius, sapien tortor molestie leo, at bibendum risus risus ut ipsum."]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["h1", [], ["Component: SVG"]], ["p", [], ["You can display SVGs directly in your page."]], ["SVG", [["src", ["value", "/public/img/thumb.svg"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam quis dolor sit amet nulla eleifend porta. Nunc nec nunc a erat commodo pellentesque. Maecenas iaculis ac urna ac viverra. Pellentesque consectetur rhoncus tempus. Integer eget velit at tellus scelerisque scelerisque quis vitae elit. Cras efficitur condimentum ipsum quis bibendum. Suspendisse porttitor rutrum lorem. Nullam vehicula ligula dolor, a blandit nisl gravida id. Phasellus et sem dignissim, lacinia nulla et, dignissim felis. Maecenas viverra quam eget quam dapibus, eget euismod urna maximus. Nam in pretium diam. Integer ornare laoreet justo. Mauris orci velit, tincidunt a consequat ut, sollicitudin nec leo. Sed ornare orci eros, volutpat venenatis dui ultrices eget. Etiam fringilla volutpat nulla, quis imperdiet urna scelerisque in. Ut neque nisi, placerat ut enim a, vehicula cursus tellus."]], ["h1", [], ["Component: Table"]], ["p", [], ["You can even include data tables. This one has some custom styling applied but the basic functionality is available out of the box."]], ["div", [], [["data", [["name", ["value", "complaints"]], ["source", ["value", "complaints.json"]]], []], ["ComplaintsTable", [["data", ["variable", "complaints"]]], []]]], ["p", [], ["Maecenas molestie diam in velit ornare faucibus. Nam vitae dignissim massa, vitae mollis nunc. Vivamus tempus, arcu vitae aliquet sollicitudin, dui ligula lacinia nulla, eu ultricies nisi lectus condimentum libero. Ut eleifend purus laoreet tincidunt elementum. Ut rutrum porttitor orci, id pellentesque quam posuere at. Morbi in lectus quis enim suscipit luctus. Integer elementum ultrices nisl, placerat dapibus purus cursus et. Etiam condimentum libero eget diam porta consequat. Praesent efficitur scelerisque pretium. Sed dapibus eget sapien ac placerat. Proin sit amet ligula felis. Nulla facilisi. Aenean et fringilla ligula, nec porttitor turpis."]], ["p", [], ["Fusce molestie blandit laoreet. Nam tincidunt dictum turpis vel suscipit. Cras quis convallis mi, eu facilisis justo. Nunc luctus, arcu tristique congue gravida, tortor diam condimentum nisi, in pharetra sapien dolor id dui. Quisque lectus odio, hendrerit ultrices ornare eu, rhoncus non augue. Nullam at porttitor mi, at luctus ipsum. Aenean vulputate augue sed nisl condimentum, non pharetra justo tincidunt. Nam ullamcorper interdum porta. In viverra felis nisl, vitae aliquet tellus facilisis sit amet. Quisque accumsan pretium tincidunt."]], ["p", [], ["Integer faucibus sapien in massa fringilla, semper eleifend dolor finibus. Cras volutpat fringilla nisl molestie suscipit. Quisque ac nisl sed ligula porttitor aliquam. Etiam vulputate sapien et fermentum sodales. Aliquam ante ex, euismod ac quam non, maximus varius libero. In sollicitudin turpis lectus, mollis elementum elit blandit eu. Ut consectetur odio sit amet odio aliquam pulvinar. Maecenas posuere, felis scelerisque eleifend dapibus, orci arcu dignissim nulla, a eleifend arcu elit in eros. Maecenas tristique imperdiet ante. Etiam orci risus, blandit ut fermentum sed, cursus ut dolor. Maecenas a porttitor ex. Donec vel libero in libero rhoncus placerat. Aliquam erat volutpat. Fusce efficitur consectetur felis, sit amet elementum libero volutpat a. Vivamus nec neque ullamcorper magna eleifend ullamcorper non a mi. Ut odio libero, aliquam ut convallis quis, pretium vel metus."]], ["p", [], ["Donec vitae dapibus nunc, a faucibus turpis. Suspendisse mattis diam id ante sagittis vestibulum. Fusce porttitor felis in arcu elementum, quis luctus lacus varius. Donec consectetur ultrices eros in interdum. Aliquam et eros sed turpis egestas congue ut tincidunt est. Curabitur sagittis nisi ac ex porta dignissim. Donec eget sollicitudin risus. Fusce mattis pellentesque felis, quis sagittis nulla vulputate convallis. Phasellus eu mollis nulla. Mauris commodo, odio sit amet dignissim maximus, ipsum ex bibendum est, vel tincidunt nisl libero vel ex. Fusce enim tellus, sodales eget odio sed, suscipit blandit urna. Nam aliquam bibendum tincidunt. Sed metus nulla, interdum eget cursus eu, rhoncus ut neque."]], ["p", [], ["Phasellus laoreet ultrices interdum. Ut hendrerit arcu sed lectus tincidunt, in interdum elit porttitor. Nunc ac fringilla tellus. Pellentesque condimentum pellentesque iaculis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Sed ut quam placerat, luctus lorem at, tempus odio. Praesent et diam ullamcorper, aliquet ligula eu, mattis lacus. Cras gravida molestie neque non hendrerit. Aliquam porttitor magna nibh, ut accumsan ipsum tristique id. In vitae metus sed tellus tempus luctus faucibus sit amet elit."]]];
 
 },{}],"__IDYLL_COMPONENTS__":[function(require,module,exports){
 'use strict';
@@ -63106,13 +65067,14 @@ module.exports = {
 	'aside': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside'),
 	'chart': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart'),
 	'equation': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation'),
-	'svg': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg')
+	'svg': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg'),
+	'complaints-table': require('/Users/bclinkinbeard/Code/nciea/literasee/tmp/bclinkinbeard/idyll-components-demo/components/complaints-table')
 };
 
-},{"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg.js"}],"__IDYLL_DATA__":[function(require,module,exports){
+},{"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg.js","/Users/bclinkinbeard/Code/nciea/literasee/tmp/bclinkinbeard/idyll-components-demo/components/complaints-table":"/Users/bclinkinbeard/Code/nciea/literasee/tmp/bclinkinbeard/idyll-components-demo/components/complaints-table.js"}],"__IDYLL_DATA__":[function(require,module,exports){
 "use strict";
 
-module.exports = {};
+module.exports = { "complaints": [{ "key": "Bank of America", "values": { "totalComplaints": 64563, "percentTimelyResponse": 0.9758065765221566, "percentCustomerDisputed": 0, "topIssue": "Loan modification, collection, foreclosure" } }, { "key": "Wells Fargo & Company", "values": { "totalComplaints": 52148, "percentTimelyResponse": 0.9540730229247243, "percentCustomerDisputed": 0, "topIssue": "Loan modification, collection, foreclosure" } }, { "key": "Equifax", "values": { "totalComplaints": 46034, "percentTimelyResponse": 0.9999782769257506, "percentCustomerDisputed": 0, "topIssue": "Incorrect information on credit report" } }, { "key": "Experian", "values": { "totalComplaints": 43345, "percentTimelyResponse": 0.9998615757296112, "percentCustomerDisputed": 0, "topIssue": "Incorrect information on credit report" } }, { "key": "JPMorgan Chase & Co.", "values": { "totalComplaints": 41463, "percentTimelyResponse": 0.9978776258350819, "percentCustomerDisputed": 0, "topIssue": "Loan modification, collection, foreclosure" } }, { "key": "TransUnion Intermediate Holdings, Inc.", "values": { "totalComplaints": 37610, "percentTimelyResponse": 0.9999468226535496, "percentCustomerDisputed": 0, "topIssue": "Incorrect information on credit report" } }, { "key": "Citibank", "values": { "totalComplaints": 33612, "percentTimelyResponse": 0.9897655599190766, "percentCustomerDisputed": 0, "topIssue": "Loan modification, collection, foreclosure" } }, { "key": "Ocwen", "values": { "totalComplaints": 23720, "percentTimelyResponse": 0.977150084317032, "percentCustomerDisputed": 0, "topIssue": "Loan modification, collection, foreclosure" } }, { "key": "Capital One", "values": { "totalComplaints": 19526, "percentTimelyResponse": 0.9966198914268155, "percentCustomerDisputed": 0, "topIssue": "Billing disputes" } }, { "key": "Navient Solutions, LLC.", "values": { "totalComplaints": 15936, "percentTimelyResponse": 0.9999372489959839, "percentCustomerDisputed": 0, "topIssue": "Dealing with my lender or servicer" } }] };
 
 },{}],"__IDYLL_SYNTAX_HIGHLIGHT__":[function(require,module,exports){
 "use strict";

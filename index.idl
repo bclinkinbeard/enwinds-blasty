@@ -94,7 +94,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam quis dolor sit 
 
 You can even include data tables. This one has some custom styling applied but the basic functionality is available out of the box.
 
-
+[data name:"complaints" source:"complaints.json" /]
+[ComplaintsTable data:complaints /]
 
 Maecenas molestie diam in velit ornare faucibus. Nam vitae dignissim massa, vitae mollis nunc. Vivamus tempus, arcu vitae aliquet sollicitudin, dui ligula lacinia nulla, eu ultricies nisi lectus condimentum libero. Ut eleifend purus laoreet tincidunt elementum. Ut rutrum porttitor orci, id pellentesque quam posuere at. Morbi in lectus quis enim suscipit luctus. Integer elementum ultrices nisl, placerat dapibus purus cursus et. Etiam condimentum libero eget diam porta consequat. Praesent efficitur scelerisque pretium. Sed dapibus eget sapien ac placerat. Proin sit amet ligula felis. Nulla facilisi. Aenean et fringilla ligula, nec porttitor turpis.
 
