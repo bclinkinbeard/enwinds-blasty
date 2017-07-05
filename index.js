@@ -10042,7 +10042,497 @@ module.exports=[
 
 module.exports = require('./html-tags.json');
 
-},{"./html-tags.json":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/html-tags/html-tags.json"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js":[function(require,module,exports){
+},{"./html-tags.json":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/html-tags/html-tags.json"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/error.js":[function(require,module,exports){
+'use strict';
+
+var Response = require('./response');
+var extractResponseProps = require('./utils/extractResponseProps');
+var extend = require('xtend');
+
+function RequestError(message, props) {
+  var err = new Error(message);
+  err.name = 'RequestError';
+  this.name = err.name;
+  this.message = err.message;
+  if (err.stack) {
+    this.stack = err.stack;
+  }
+
+  this.toString = function () {
+    return this.message;
+  };
+
+  for (var k in props) {
+    if (props.hasOwnProperty(k)) {
+      this[k] = props[k];
+    }
+  }
+}
+
+RequestError.prototype = extend(Error.prototype);
+RequestError.prototype.constructor = RequestError;
+
+RequestError.create = function (message, req, props) {
+  var err = new RequestError(message, props);
+  Response.call(err, extractResponseProps(req));
+  return err;
+};
+
+module.exports = RequestError;
+
+},{"./response":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/response.js","./utils/extractResponseProps":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/extractResponseProps.js","xtend":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/node_modules/xtend/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/index.js":[function(require,module,exports){
+'use strict';
+
+var cleanURL = require('../plugins/cleanurl'),
+    XHR = require('./xhr'),
+    delay = require('./utils/delay'),
+    RequestError = require('./error'),
+    Response = require('./response'),
+    Request = require('./request'),
+    extend = require('xtend'),
+    once = require('./utils/once');
+
+var i,
+    createError = RequestError.create;
+
+function factory(defaults, plugins) {
+  defaults = defaults || {};
+  plugins = plugins || [];
+
+  function http(req, cb) {
+    var xhr, plugin, done, k, timeoutId, supportsLoadAndErrorEvents;
+
+    req = new Request(extend(defaults, req));
+
+    for (i = 0; i < plugins.length; i++) {
+      plugin = plugins[i];
+      if (plugin.processRequest) {
+        plugin.processRequest(req);
+      }
+    }
+
+    // Give the plugins a chance to create the XHR object
+    for (i = 0; i < plugins.length; i++) {
+      plugin = plugins[i];
+      if (plugin.createXHR) {
+        xhr = plugin.createXHR(req);
+        break; // First come, first serve
+      }
+    }
+    xhr = xhr || new XHR();
+
+    req.xhr = xhr;
+
+    // Use a single completion callback. This can be called with or without
+    // an error. If no error is passed, the request will be examined to see
+    // if it was successful.
+    done = once(delay(function (rawError) {
+      clearTimeout(timeoutId);
+      xhr.onload = xhr.onerror = xhr.onabort = xhr.onreadystatechange = xhr.ontimeout = xhr.onprogress = null;
+
+      var err = getError(req, rawError);
+
+      var res = err || Response.fromRequest(req);
+      for (i = 0; i < plugins.length; i++) {
+        plugin = plugins[i];
+        if (plugin.processResponse) {
+          plugin.processResponse(res);
+        }
+      }
+
+      // Invoke callbacks
+      if (err && req.onerror) req.onerror(err);
+      if (!err && req.onload) req.onload(res);
+      if (cb) cb(err, err ? undefined : res);
+    }));
+
+    supportsLoadAndErrorEvents = 'onload' in xhr && 'onerror' in xhr;
+    xhr.onload = function () {
+      done();
+    };
+    xhr.onerror = done;
+    xhr.onabort = function () {
+      done();
+    };
+
+    // We'd rather use `onload`, `onerror`, and `onabort` since they're the
+    // only way to reliably detect successes and failures but, if they
+    // aren't available, we fall back to using `onreadystatechange`.
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+
+      if (req.aborted) return done();
+
+      if (!supportsLoadAndErrorEvents) {
+        // Assume a status of 0 is an error. This could be a false
+        // positive, but there's no way to tell when using
+        // `onreadystatechange` ):
+        // See matthewwithanm/react-inlinesvg#10.
+
+        // Some browsers don't like you reading XHR properties when the
+        // XHR has been aborted. In case we've gotten here as a result
+        // of that (either our calling `about()` in the timeout handler
+        // or the user calling it directly even though they shouldn't),
+        // be careful about accessing it.
+        var status;
+        try {
+          status = xhr.status;
+        } catch (err) {}
+        var err = status === 0 ? new Error('Internal XHR Error') : null;
+        return done(err);
+      }
+    };
+
+    // IE sometimes fails if you don't specify every handler.
+    // See http://social.msdn.microsoft.com/Forums/ie/en-US/30ef3add-767c-4436-b8a9-f1ca19b4812e/ie9-rtm-xdomainrequest-issued-requests-may-abort-if-all-event-handlers-not-specified?forum=iewebdevelopment
+    xhr.ontimeout = function () {/* noop */};
+    xhr.onprogress = function () {/* noop */};
+
+    xhr.open(req.method, req.url);
+
+    if (req.timeout) {
+      // If we use the normal XHR timeout mechanism (`xhr.timeout` and
+      // `xhr.ontimeout`), `onreadystatechange` will be triggered before
+      // `ontimeout`. There's no way to recognize that it was triggered by
+      // a timeout, and we'd be unable to dispatch the right error.
+      timeoutId = setTimeout(function () {
+        req.timedOut = true;
+        done();
+        try {
+          xhr.abort();
+        } catch (err) {}
+      }, req.timeout);
+    }
+
+    for (k in req.headers) {
+      if (req.headers.hasOwnProperty(k)) {
+        xhr.setRequestHeader(k, req.headers[k]);
+      }
+    }
+
+    xhr.send(req.body);
+
+    return req;
+  }
+
+  var method,
+      methods = ['get', 'post', 'put', 'head', 'patch', 'delete'],
+      verb = function verb(method) {
+    return function (req, cb) {
+      req = new Request(req);
+      req.method = method;
+      return http(req, cb);
+    };
+  };
+  for (i = 0; i < methods.length; i++) {
+    method = methods[i];
+    http[method] = verb(method);
+  }
+
+  http.plugins = function () {
+    return plugins;
+  };
+
+  http.defaults = function (newValues) {
+    if (newValues) {
+      return factory(extend(defaults, newValues), plugins);
+    }
+    return defaults;
+  };
+
+  http.use = function () {
+    var newPlugins = Array.prototype.slice.call(arguments, 0);
+    return factory(defaults, plugins.concat(newPlugins));
+  };
+
+  http.bare = function () {
+    return factory();
+  };
+
+  http.Request = Request;
+  http.Response = Response;
+  http.RequestError = RequestError;
+
+  return http;
+}
+
+module.exports = factory({}, [cleanURL]);
+
+/**
+ * Analyze the request to see if it represents an error. If so, return it! An
+ * original error object can be passed as a hint.
+ */
+function getError(req, err) {
+  if (req.aborted) return createError('Request aborted', req, { name: 'Abort' });
+
+  if (req.timedOut) return createError('Request timeout', req, { name: 'Timeout' });
+
+  var xhr = req.xhr;
+  var type = Math.floor(xhr.status / 100);
+
+  var kind;
+  switch (type) {
+    case 0:
+    case 2:
+      // These don't represent errors unless the function was passed an
+      // error object explicitly.
+      if (!err) return;
+      return createError(err.message, req);
+    case 4:
+      // Sometimes 4XX statuses aren't errors.
+      if (xhr.status === 404 && !req.errorOn404) return;
+      kind = 'Client';
+      break;
+    case 5:
+      kind = 'Server';
+      break;
+    default:
+      kind = 'HTTP';
+  }
+  var msg = kind + ' Error: ' + 'The server returned a status of ' + xhr.status + ' for the request "' + req.method.toUpperCase() + ' ' + req.url + '"';
+  return createError(msg, req);
+}
+
+},{"../plugins/cleanurl":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/plugins/cleanurl.js","./error":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/error.js","./request":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/request.js","./response":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/response.js","./utils/delay":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/delay.js","./utils/once":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/once.js","./xhr":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/xhr-browser.js","xtend":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/node_modules/xtend/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/request.js":[function(require,module,exports){
+'use strict';
+
+function Request(optsOrUrl) {
+  var opts = typeof optsOrUrl === 'string' ? { url: optsOrUrl } : optsOrUrl || {};
+  this.method = opts.method ? opts.method.toUpperCase() : 'GET';
+  this.url = opts.url;
+  this.headers = opts.headers || {};
+  this.body = opts.body;
+  this.timeout = opts.timeout || 0;
+  this.errorOn404 = opts.errorOn404 != null ? opts.errorOn404 : true;
+  this.onload = opts.onload;
+  this.onerror = opts.onerror;
+}
+
+Request.prototype.abort = function () {
+  if (this.aborted) return;
+  this.aborted = true;
+  this.xhr.abort();
+  return this;
+};
+
+Request.prototype.header = function (name, value) {
+  var k;
+  for (k in this.headers) {
+    if (this.headers.hasOwnProperty(k)) {
+      if (name.toLowerCase() === k.toLowerCase()) {
+        if (arguments.length === 1) {
+          return this.headers[k];
+        }
+
+        delete this.headers[k];
+        break;
+      }
+    }
+  }
+  if (value != null) {
+    this.headers[name] = value;
+    return value;
+  }
+};
+
+module.exports = Request;
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/response.js":[function(require,module,exports){
+'use strict';
+
+var Request = require('./request');
+var extractResponseProps = require('./utils/extractResponseProps');
+
+function Response(props) {
+  this.request = props.request;
+  this.xhr = props.xhr;
+  this.headers = props.headers || {};
+  this.status = props.status || 0;
+  this.text = props.text;
+  this.body = props.body;
+  this.contentType = props.contentType;
+  this.isHttpError = props.status >= 400;
+}
+
+Response.prototype.header = Request.prototype.header;
+
+Response.fromRequest = function (req) {
+  return new Response(extractResponseProps(req));
+};
+
+module.exports = Response;
+
+},{"./request":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/request.js","./utils/extractResponseProps":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/extractResponseProps.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/delay.js":[function(require,module,exports){
+'use strict';
+
+// Wrap a function in a `setTimeout` call. This is used to guarantee async
+// behavior, which can avoid unexpected errors.
+
+module.exports = function (fn) {
+  return function () {
+    var args = Array.prototype.slice.call(arguments, 0),
+        newFunc = function newFunc() {
+      return fn.apply(null, args);
+    };
+    setTimeout(newFunc, 0);
+  };
+};
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/extractResponseProps.js":[function(require,module,exports){
+'use strict';
+
+var extend = require('xtend');
+
+module.exports = function (req) {
+  var xhr = req.xhr;
+  var props = { request: req, xhr: xhr };
+
+  // Try to create the response from the request. If the request was aborted,
+  // accesssing properties of the XHR may throw an error, so we wrap in a
+  // try/catch.
+  try {
+    var lines,
+        i,
+        m,
+        headers = {};
+    if (xhr.getAllResponseHeaders) {
+      lines = xhr.getAllResponseHeaders().split('\n');
+      for (i = 0; i < lines.length; i++) {
+        if (m = lines[i].match(/\s*([^\s]+):\s+([^\s]+)/)) {
+          headers[m[1]] = m[2];
+        }
+      }
+    }
+
+    props = extend(props, {
+      status: xhr.status,
+      contentType: xhr.contentType || xhr.getResponseHeader && xhr.getResponseHeader('Content-Type'),
+      headers: headers,
+      text: xhr.responseText,
+      body: xhr.response || xhr.responseText
+    });
+  } catch (err) {}
+
+  return props;
+};
+
+},{"xtend":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/node_modules/xtend/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/once.js":[function(require,module,exports){
+'use strict';
+
+// A "once" utility.
+
+module.exports = function (fn) {
+  var result,
+      called = false;
+  return function () {
+    if (!called) {
+      called = true;
+      result = fn.apply(this, arguments);
+    }
+    return result;
+  };
+};
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/xhr-browser.js":[function(require,module,exports){
+"use strict";
+
+module.exports = window.XMLHttpRequest;
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/node_modules/xtend/index.js":[function(require,module,exports){
+module.exports = extend
+
+function extend() {
+    var target = {}
+
+    for (var i = 0; i < arguments.length; i++) {
+        var source = arguments[i]
+
+        for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+                target[key] = source[key]
+            }
+        }
+    }
+
+    return target
+}
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/plugins/cleanurl.js":[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  processRequest: function processRequest(req) {
+    req.url = req.url.replace(/[^%]+/g, function (s) {
+      return encodeURI(s);
+    });
+  }
+};
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/plugins/oldiexdomain.js":[function(require,module,exports){
+'use strict';
+
+var urllite = require('urllite/lib/core'),
+    once = require('../lib/utils/once');
+
+var warningShown = false;
+
+var supportsXHR = once(function () {
+  return typeof window !== 'undefined' && window !== null && window.XMLHttpRequest && 'withCredentials' in new window.XMLHttpRequest();
+});
+
+// This plugin creates a Microsoft `XDomainRequest` in supporting browsers when
+// the URL being requested is on a different domain. This is necessary to
+// support IE9, which only supports CORS via its proprietary `XDomainRequest`
+// object. We need to check the URL because `XDomainRequest` *doesn't* work for
+// same domain requests (unless your server sends CORS headers).
+// `XDomainRequest` also has other limitations (no custom headers), so we try to
+// catch those and error.
+module.exports = {
+  createXHR: function createXHR(req) {
+    var a, b, k;
+
+    if (typeof window === 'undefined' || window === null) {
+      return;
+    }
+
+    a = urllite(req.url);
+    b = urllite(window.location.href);
+
+    // Don't do anything for same-domain requests.
+    if (!a.host) {
+      return;
+    }
+    if (a.protocol === b.protocol && a.host === b.host && a.port === b.port) {
+      return;
+    }
+
+    // Show a warning if there are custom headers. We do this even in
+    // browsers that won't use XDomainRequest so that users know there's an
+    // issue right away, instead of if/when they test in IE9.
+    if (!warningShown && req.headers) {
+      for (k in req.headers) {
+        if (req.headers.hasOwnProperty(k)) {
+          warningShown = true;
+          if (window && window.console && window.console.warn) {
+            window.console.warn('Request headers are ignored in old IE when using the oldiexdomain plugin.');
+          }
+          break;
+        }
+      }
+    }
+
+    // Don't do anything if we can't do anything (:
+    // Don't do anything if the browser supports proper XHR.
+    if (window.XDomainRequest && !supportsXHR()) {
+      // We've come this far. Might as well make an XDomainRequest.
+      var xdr = new window.XDomainRequest();
+      xdr.setRequestHeader = function () {}; // Ignore request headers.
+      return xdr;
+    }
+  }
+};
+
+},{"../lib/utils/once":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/utils/once.js","urllite/lib/core":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/urllite/lib/core.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js":[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -10514,7 +11004,65 @@ var Header = function (_IdyllComponent) {
 
 module.exports = Header;
 
-},{"idyll-component":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll/src/client/build.js":[function(require,module,exports){
+},{"idyll-component":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg.js":[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _createClass = function () {
+  function defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }return function (Constructor, protoProps, staticProps) {
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+  };
+}();
+
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+function _possibleConstructorReturn(self, call) {
+  if (!self) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }return call && ((typeof call === "undefined" ? "undefined" : _typeof(call)) === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function, not " + (typeof superClass === "undefined" ? "undefined" : _typeof(superClass)));
+  }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var React = require('react');
+var IdyllComponent = require('idyll-component');
+var InlineSVG = require('react-inlinesvg');
+
+var SVG = function (_IdyllComponent) {
+  _inherits(SVG, _IdyllComponent);
+
+  function SVG() {
+    _classCallCheck(this, SVG);
+
+    return _possibleConstructorReturn(this, (SVG.__proto__ || Object.getPrototypeOf(SVG)).apply(this, arguments));
+  }
+
+  _createClass(SVG, [{
+    key: 'render',
+    value: function render() {
+      return React.createElement(InlineSVG, this.props);
+    }
+  }]);
+
+  return SVG;
+}(IdyllComponent);
+
+module.exports = SVG;
+
+},{"idyll-component":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-component/lib.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js","react-inlinesvg":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-inlinesvg/lib/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll/src/client/build.js":[function(require,module,exports){
 'use strict';
 
 var React = require('react');
@@ -29731,7 +30279,52 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/param-case/param-case.js":[function(require,module,exports){
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/once/once.js":[function(require,module,exports){
+'use strict';
+
+var wrappy = require('wrappy');
+module.exports = wrappy(once);
+module.exports.strict = wrappy(onceStrict);
+
+once.proto = once(function () {
+  Object.defineProperty(Function.prototype, 'once', {
+    value: function value() {
+      return once(this);
+    },
+    configurable: true
+  });
+
+  Object.defineProperty(Function.prototype, 'onceStrict', {
+    value: function value() {
+      return onceStrict(this);
+    },
+    configurable: true
+  });
+});
+
+function once(fn) {
+  var f = function f() {
+    if (f.called) return f.value;
+    f.called = true;
+    return f.value = fn.apply(this, arguments);
+  };
+  f.called = false;
+  return f;
+}
+
+function onceStrict(fn) {
+  var f = function f() {
+    if (f.called) throw new Error(f.onceError);
+    f.called = true;
+    return f.value = fn.apply(this, arguments);
+  };
+  var name = fn.name || 'Function wrapped with `once`';
+  f.onceError = name + " shouldn't be called more than once";
+  f.called = false;
+  return f;
+}
+
+},{"wrappy":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/wrappy/wrappy.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/param-case/param-case.js":[function(require,module,exports){
 'use strict';
 
 var noCase = require('no-case'
@@ -46671,7 +47264,445 @@ if ("production" !== 'production') {
 
 module.exports = validateDOMNesting;
 
-},{"fbjs/lib/emptyFunction":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/fbjs/lib/emptyFunction.js","fbjs/lib/warning":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/fbjs/lib/warning.js","object-assign":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/object-assign/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-latex/build/latex.js":[function(require,module,exports){
+},{"fbjs/lib/emptyFunction":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/fbjs/lib/emptyFunction.js","fbjs/lib/warning":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/fbjs/lib/warning.js","object-assign":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/object-assign/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-inlinesvg/lib/index.js":[function(require,module,exports){
+'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () {
+  function defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }return function (Constructor, protoProps, staticProps) {
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+  };
+}();
+
+var _propTypes = require('prop-types');
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _once = require('once');
+
+var _once2 = _interopRequireDefault(_once);
+
+var _httpplease = require('httpplease');
+
+var _httpplease2 = _interopRequireDefault(_httpplease);
+
+var _oldiexdomain = require('httpplease/plugins/oldiexdomain');
+
+var _oldiexdomain2 = _interopRequireDefault(_oldiexdomain);
+
+var _shouldComponentUpdate = require('./shouldComponentUpdate');
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+function _possibleConstructorReturn(self, call) {
+  if (!self) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }return call && ((typeof call === "undefined" ? "undefined" : _typeof(call)) === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function, not " + (typeof superClass === "undefined" ? "undefined" : _typeof(superClass)));
+  }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var http = _httpplease2.default.use(_oldiexdomain2.default);
+
+var Status = {
+  PENDING: 'pending',
+  LOADING: 'loading',
+  LOADED: 'loaded',
+  FAILED: 'failed',
+  UNSUPPORTED: 'unsupported'
+};
+
+var getRequestsByUrl = {};
+var loadedIcons = {};
+
+var createGetOrUseCacheForUrl = function createGetOrUseCacheForUrl(url, callback) {
+  if (loadedIcons[url]) {
+    var params = loadedIcons[url];
+
+    setTimeout(function () {
+      return callback(params[0], params[1]);
+    }, 0);
+  }
+
+  if (!getRequestsByUrl[url]) {
+    getRequestsByUrl[url] = [];
+
+    http.get(url, function (err, res) {
+      getRequestsByUrl[url].forEach(function (cb) {
+        loadedIcons[url] = [err, res];
+        cb(err, res);
+      });
+    });
+  }
+
+  getRequestsByUrl[url].push(callback);
+};
+
+var supportsInlineSVG = (0, _once2.default)(function () {
+  if (!document) {
+    return false;
+  }
+
+  var div = document.createElement('div');
+  div.innerHTML = '<svg />';
+  return div.firstChild && div.firstChild.namespaceURI === 'http://www.w3.org/2000/svg';
+});
+
+var isSupportedEnvironment = (0, _once2.default)(function () {
+  return ((typeof window !== 'undefined' && window !== null ? window.XMLHttpRequest : false) || (typeof window !== 'undefined' && window !== null ? window.XDomainRequest : false)) && supportsInlineSVG();
+});
+
+var uniquifyIDs = function () {
+  var mkAttributePattern = function mkAttributePattern(attr) {
+    return '(?:(?:\\s|\\:)' + attr + ')';
+  };
+
+  var idPattern = new RegExp('(?:(' + mkAttributePattern('id') + ')="([^"]+)")|(?:(' + mkAttributePattern('href') + '|' + mkAttributePattern('role') + '|' + mkAttributePattern('arcrole') + ')="\\#([^"]+)")|(?:="url\\(\\#([^\\)]+)\\)")', 'g');
+
+  return function (svgText, svgID) {
+    var uniquifyID = function uniquifyID(id) {
+      return id + '___' + svgID;
+    };
+
+    return svgText.replace(idPattern, function (m, p1, p2, p3, p4, p5) {
+      //eslint-disable-line consistent-return
+      if (p2) {
+        return p1 + '="' + uniquifyID(p2) + '"';
+      } else if (p4) {
+        return p3 + '="#' + uniquifyID(p4) + '"';
+      } else if (p5) {
+        return '="url(#' + uniquifyID(p5) + ')"';
+      }
+    });
+  };
+}();
+
+var getHash = function getHash(str) {
+  var chr = void 0;
+  var hash = 0;
+  var i = void 0;
+  var j = void 0;
+  var ref = void 0;
+
+  if (!str) {
+    return hash;
+  }
+
+  for (i = j = 0, ref = str.length; ref >= 0 ? j < ref : j > ref; i = ref >= 0 ? ++j : --j) {
+    chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash &= hash;
+  }
+
+  return hash;
+};
+
+var InlineSVGError = function (_Error) {
+  _inherits(InlineSVGError, _Error);
+
+  function InlineSVGError(message) {
+    var _ret;
+
+    _classCallCheck(this, InlineSVGError);
+
+    var _this = _possibleConstructorReturn(this, (InlineSVGError.__proto__ || Object.getPrototypeOf(InlineSVGError)).call(this));
+
+    _this.name = 'InlineSVGError';
+    _this.isSupportedBrowser = true;
+    _this.isConfigurationError = false;
+    _this.isUnsupportedBrowserError = false;
+    _this.message = message;
+
+    return _ret = _this, _possibleConstructorReturn(_this, _ret);
+  }
+
+  return InlineSVGError;
+}(Error);
+
+var createError = function createError(message, attrs) {
+  var err = new InlineSVGError(message);
+
+  Object.keys(attrs).forEach(function (k) {
+    err[k] = attrs[k];
+  });
+
+  return err;
+};
+
+var unsupportedBrowserError = function unsupportedBrowserError(message) {
+  var newMessage = message;
+
+  if (newMessage === null) {
+    newMessage = 'Unsupported Browser';
+  }
+
+  return createError(newMessage, {
+    isSupportedBrowser: false,
+    isUnsupportedBrowserError: true
+  });
+};
+
+var configurationError = function configurationError(message) {
+  return createError(message, {
+    isConfigurationError: true
+  });
+};
+
+var InlineSVG = function (_React$Component) {
+  _inherits(InlineSVG, _React$Component);
+
+  function InlineSVG(props) {
+    _classCallCheck(this, InlineSVG);
+
+    var _this2 = _possibleConstructorReturn(this, (InlineSVG.__proto__ || Object.getPrototypeOf(InlineSVG)).call(this, props));
+
+    _this2.shouldComponentUpdate = _shouldComponentUpdate.shouldComponentUpdate;
+
+    _this2.state = {
+      status: Status.PENDING
+    };
+
+    _this2.handleLoad = _this2.handleLoad.bind(_this2);
+    _this2.isActive = false;
+    return _this2;
+  }
+
+  _createClass(InlineSVG, [{
+    key: 'componentWillMount',
+    value: function componentWillMount() {
+      this.isActive = true;
+    }
+  }, {
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      if (this.state.status === Status.PENDING) {
+        if (this.props.supportTest()) {
+          if (this.props.src) {
+            this.startLoad();
+          } else {
+            this.fail(configurationError('Missing source'));
+          }
+        } else {
+          this.fail(unsupportedBrowserError());
+        }
+      }
+    }
+  }, {
+    key: 'componentWillUnmount',
+    value: function componentWillUnmount() {
+      this.isActive = false;
+    }
+  }, {
+    key: 'fail',
+    value: function fail(error) {
+      var _this3 = this;
+
+      var status = error.isUnsupportedBrowserError ? Status.UNSUPPORTED : Status.FAILED;
+
+      if (this.isActive) {
+        this.setState({ status: status }, function () {
+          if (typeof _this3.props.onError === 'function') {
+            _this3.props.onError(error);
+          }
+        });
+      }
+    }
+  }, {
+    key: 'handleLoad',
+    value: function handleLoad(err, res) {
+      var _this4 = this;
+
+      if (err) {
+        this.fail(err);
+        return;
+      }
+
+      if (this.isActive) {
+        this.setState({
+          loadedText: res.text,
+          status: Status.LOADED
+        }, function () {
+          return typeof _this4.props.onLoad === 'function' ? _this4.props.onLoad() : null;
+        });
+      }
+    }
+  }, {
+    key: 'startLoad',
+    value: function startLoad() {
+      if (this.isActive) {
+        this.setState({
+          status: Status.LOADING
+        }, this.load);
+      }
+    }
+  }, {
+    key: 'load',
+    value: function load() {
+      var match = this.props.src.match(/data:image\/svg[^,]*?(;base64)?,(.*)/);
+      if (match) {
+        return this.handleLoad(null, {
+          text: match[1] ? atob(match[2]) : decodeURIComponent(match[2])
+        });
+      }
+      if (this.props.cacheGetRequests) {
+        return createGetOrUseCacheForUrl(this.props.src, this.handleLoad);
+      }
+
+      return http.get(this.props.src, this.handleLoad);
+    }
+  }, {
+    key: 'getClassName',
+    value: function getClassName() {
+      var className = 'isvg ' + this.state.status;
+
+      if (this.props.className) {
+        className += ' ' + this.props.className;
+      }
+
+      return className;
+    }
+  }, {
+    key: 'processSVG',
+    value: function processSVG(svgText) {
+      if (this.props.uniquifyIDs) {
+        return uniquifyIDs(svgText, getHash(this.props.src));
+      }
+
+      return svgText;
+    }
+  }, {
+    key: 'renderContents',
+    value: function renderContents() {
+      switch (this.state.status) {
+        case Status.UNSUPPORTED:
+        case Status.FAILED:
+          return this.props.children;
+        default:
+          return this.props.preloader;
+      }
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return this.props.wrapper({
+        style: this.props.style,
+        className: this.getClassName(),
+        dangerouslySetInnerHTML: this.state.loadedText ? {
+          __html: this.processSVG(this.state.loadedText)
+        } : undefined
+      }, this.renderContents());
+    }
+  }]);
+
+  return InlineSVG;
+}(_react2.default.Component);
+
+InlineSVG.propTypes = {
+  cacheGetRequests: _propTypes2.default.bool,
+  children: _propTypes2.default.node,
+  className: _propTypes2.default.string,
+  onError: _propTypes2.default.func,
+  onLoad: _propTypes2.default.func,
+  preloader: _propTypes2.default.func,
+  src: _propTypes2.default.string.isRequired,
+  style: _propTypes2.default.object,
+  supportTest: _propTypes2.default.func,
+  uniquifyIDs: _propTypes2.default.bool,
+  wrapper: _propTypes2.default.func
+};
+InlineSVG.defaultProps = {
+  wrapper: _react2.default.DOM.span,
+  supportTest: isSupportedEnvironment,
+  uniquifyIDs: true,
+  cacheGetRequests: false
+};
+exports.default = InlineSVG;
+module.exports = exports['default'];
+
+},{"./shouldComponentUpdate":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-inlinesvg/lib/shouldComponentUpdate.js","httpplease":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/lib/index.js","httpplease/plugins/oldiexdomain":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/httpplease/plugins/oldiexdomain.js","once":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/once/once.js","prop-types":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/prop-types/index.js","react":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react/react.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-inlinesvg/lib/shouldComponentUpdate.js":[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.shouldComponentUpdate = shouldComponentUpdate;
+exports.shouldComponentUpdateContext = shouldComponentUpdateContext;
+
+var _shallowEqual = require('fbjs/lib/shallowEqual');
+
+var _shallowEqual2 = _interopRequireDefault(_shallowEqual);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+/**
+ *  @module PureRender
+ */
+
+/**
+ * shouldComponentUpdate without context.
+ *
+ * @requires shallowEqual
+ *
+ * @param {Object} nextProps
+ * @param {Object} nextState
+ *
+ * @returns {boolean}
+ */
+function shouldComponentUpdate(nextProps, nextState) {
+  return !(0, _shallowEqual2.default)(this.props, nextProps) || !(0, _shallowEqual2.default)(this.state, nextState);
+}
+
+/**
+ * shouldComponentUpdate with context.
+ *
+ * @requires shallowEqual
+ *
+ * @param {Object} nextProps
+ * @param {Object} nextState
+ * @param {Object} nextContext
+ *
+ * @returns {boolean}
+ */
+function shouldComponentUpdateContext(nextProps, nextState, nextContext) {
+  return !(0, _shallowEqual2.default)(this.props, nextProps) || !(0, _shallowEqual2.default)(this.state, nextState) || !(0, _shallowEqual2.default)(this.context, nextContext);
+}
+
+exports.default = { shouldComponentUpdate: shouldComponentUpdate, shouldComponentUpdateContext: shouldComponentUpdateContext };
+
+},{"fbjs/lib/shallowEqual":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/fbjs/lib/shallowEqual.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/react-latex/build/latex.js":[function(require,module,exports){
 "use strict";
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -49969,6 +51000,76 @@ var LANGUAGES = {
 
   return str.toUpperCase();
 };
+
+},{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/urllite/lib/core.js":[function(require,module,exports){
+"use strict";
+
+(function () {
+  var URL,
+      URL_PATTERN,
+      defaults,
+      _urllite,
+      __hasProp = {}.hasOwnProperty;
+
+  URL_PATTERN = /^(?:(?:([^:\/?\#]+:)\/+|(\/\/))(?:([a-z0-9-\._~%]+)(?::([a-z0-9-\._~%]+))?@)?(([a-z0-9-\._~%!$&'()*+,;=]+)(?::([0-9]+))?)?)?([^?\#]*?)(\?[^\#]*)?(\#.*)?$/;
+
+  _urllite = function urllite(raw, opts) {
+    return _urllite.URL.parse(raw, opts);
+  };
+
+  _urllite.URL = URL = function () {
+    function URL(props) {
+      var k, v, _ref;
+      for (k in defaults) {
+        if (!__hasProp.call(defaults, k)) continue;
+        v = defaults[k];
+        this[k] = (_ref = props[k]) != null ? _ref : v;
+      }
+      this.host || (this.host = this.hostname && this.port ? "" + this.hostname + ":" + this.port : this.hostname ? this.hostname : '');
+      this.origin || (this.origin = this.protocol ? "" + this.protocol + "//" + this.host : '');
+      this.isAbsolutePathRelative = !this.host && this.pathname.charAt(0) === '/';
+      this.isPathRelative = !this.host && this.pathname.charAt(0) !== '/';
+      this.isRelative = this.isSchemeRelative || this.isAbsolutePathRelative || this.isPathRelative;
+      this.isAbsolute = !this.isRelative;
+    }
+
+    URL.parse = function (raw) {
+      var m, pathname, protocol;
+      m = raw.toString().match(URL_PATTERN);
+      pathname = m[8] || '';
+      protocol = m[1];
+      return new _urllite.URL({
+        protocol: protocol,
+        username: m[3],
+        password: m[4],
+        hostname: m[6],
+        port: m[7],
+        pathname: protocol && pathname.charAt(0) !== '/' ? "/" + pathname : pathname,
+        search: m[9],
+        hash: m[10],
+        isSchemeRelative: m[2] != null
+      });
+    };
+
+    return URL;
+  }();
+
+  defaults = {
+    protocol: '',
+    username: '',
+    password: '',
+    host: '',
+    hostname: '',
+    port: '',
+    pathname: '',
+    search: '',
+    hash: '',
+    origin: '',
+    isSchemeRelative: false
+  };
+
+  module.exports = _urllite;
+}).call(undefined);
 
 },{}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-chart/lib/components/containers/brush-helpers.js":[function(require,module,exports){
 "use strict";
@@ -61956,10 +63057,46 @@ var _victoryChart = require("victory-chart");
 
 var _victoryPie = require("victory-pie");exports.Area = _victoryCore.Area;exports.Bar = _victoryCore.Bar;exports.Candle = _victoryCore.Candle;exports.ClipPath = _victoryCore.ClipPath;exports.Curve = _victoryCore.Curve;exports.ErrorBar = _victoryCore.ErrorBar;exports.Line = _victoryCore.Line;exports.Point = _victoryCore.Point;exports.Slice = _victoryCore.Slice;exports.Voronoi = _victoryCore.Voronoi;exports.Flyout = _victoryCore.Flyout;exports.VictoryAnimation = _victoryCore.VictoryAnimation;exports.VictoryArea = _victoryChart.VictoryArea;exports.VictoryAxis = _victoryChart.VictoryAxis;exports.VictoryPolarAxis = _victoryChart.VictoryPolarAxis;exports.VictoryBar = _victoryChart.VictoryBar;exports.VictoryCandlestick = _victoryChart.VictoryCandlestick;exports.VictoryChart = _victoryChart.VictoryChart;exports.VictoryErrorBar = _victoryChart.VictoryErrorBar;exports.VictoryGroup = _victoryChart.VictoryGroup;exports.VictoryLine = _victoryChart.VictoryLine;exports.VictoryLabel = _victoryCore.VictoryLabel;exports.VictoryLegend = _victoryCore.VictoryLegend;exports.VictoryPie = _victoryPie.VictoryPie;exports.VictoryScatter = _victoryChart.VictoryScatter;exports.VictoryStack = _victoryChart.VictoryStack;exports.VictoryTheme = _victoryCore.VictoryTheme;exports.VictoryTransition = _victoryCore.VictoryTransition;exports.VictorySharedEvents = _victoryCore.VictorySharedEvents;exports.VictoryTooltip = _victoryCore.VictoryTooltip;exports.VictoryVoronoi = _victoryChart.VictoryVoronoi;exports.VictoryPortal = _victoryCore.VictoryPortal;exports.Portal = _victoryCore.Portal;exports.VictoryContainer = _victoryCore.VictoryContainer;exports.VictoryClipContainer = _victoryCore.VictoryClipContainer;exports.VictoryZoomContainer = _victoryChart.VictoryZoomContainer;exports.ZoomHelpers = _victoryChart.ZoomHelpers;exports.zoomContainerMixin = _victoryChart.zoomContainerMixin;exports.VictorySelectionContainer = _victoryChart.VictorySelectionContainer;exports.SelectionHelpers = _victoryChart.SelectionHelpers;exports.selectionContainerMixin = _victoryChart.selectionContainerMixin;exports.VictoryBrushContainer = _victoryChart.VictoryBrushContainer;exports.BrushHelpers = _victoryChart.BrushHelpers;exports.brushContainerMixin = _victoryChart.brushContainerMixin;exports.VictoryCursorContainer = _victoryChart.VictoryCursorContainer;exports.CursorHelpers = _victoryChart.CursorHelpers;exports.cursorContainerMixin = _victoryChart.cursorContainerMixin;exports.VictoryVoronoiContainer = _victoryChart.VictoryVoronoiContainer;exports.VoronoiHelpers = _victoryChart.VoronoiHelpers;exports.voronoiContainerMixin = _victoryChart.voronoiContainerMixin;exports.combineContainerMixins = _victoryChart.combineContainerMixins;exports.createContainer = _victoryChart.createContainer;exports.addEvents = _victoryCore.addEvents;exports.Collection = _victoryCore.Collection;exports.Data = _victoryCore.Data;exports.DefaultTransitions = _victoryCore.DefaultTransitions;exports.Domain = _victoryCore.Domain;exports.Events = _victoryCore.Events;exports.Helpers = _victoryCore.Helpers;exports.Log = _victoryCore.Log;exports.PropTypes = _victoryCore.PropTypes;exports.Scale = _victoryCore.Scale;exports.Style = _victoryCore.Style;exports.TextSize = _victoryCore.TextSize;exports.Transitions = _victoryCore.Transitions;exports.Selection = _victoryCore.Selection;exports.LabelHelpers = _victoryCore.LabelHelpers;
 
-},{"victory-chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-chart/lib/index.js","victory-core":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-core/lib/index.js","victory-pie":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-pie/lib/index.js"}],"__IDYLL_AST__":[function(require,module,exports){
+},{"victory-chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-chart/lib/index.js","victory-core":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-core/lib/index.js","victory-pie":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/victory-pie/lib/index.js"}],"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/wrappy/wrappy.js":[function(require,module,exports){
+'use strict';
+
+// Returns a wrapper function that returns a wrapped callback
+// The wrapper function should do some stuff, and return a
+// presumably different callback function.
+// This makes sure that own properties are retained, so that
+// decorations and such are not lost along the way.
+module.exports = wrappy;
+function wrappy(fn, cb) {
+  if (fn && cb) return wrappy(fn)(cb);
+
+  if (typeof fn !== 'function') throw new TypeError('need wrapper function');
+
+  Object.keys(fn).forEach(function (k) {
+    wrapper[k] = fn[k];
+  });
+
+  return wrapper;
+
+  function wrapper() {
+    var args = new Array(arguments.length);
+    for (var i = 0; i < args.length; i++) {
+      args[i] = arguments[i];
+    }
+    var ret = fn.apply(this, args);
+    var cb = args[args.length - 1];
+    if (typeof ret === 'function' && ret !== cb) {
+      Object.keys(cb).forEach(function (k) {
+        ret[k] = cb[k];
+      });
+    }
+    return ret;
+  }
+}
+
+},{}],"__IDYLL_AST__":[function(require,module,exports){
 "use strict";
 
-module.exports = [["Header", [["title", ["value", "Component: Header"]], ["subtitle", ["value", "This title, subtitle, and byline are created using the code below"]], ["author", ["value", "Aristotle Jenkins"]], ["authorLink", ["value", "http://weirdal.com/"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim."]], ["pre", [], [["code", [], ["[Header\n  title:\"Component: Header\"\n  subtitle:\"This title, subtitle, and byline are created using the Header component\"\n  author:\"Aristotle Jenkins\"\n  authorLink:\"http://weirdal.com/\" /]"]]]], ["p", [], ["Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti."]], ["aside", [], [["div", [], [["var", [["name", ["expression", "dataToBeCharted"]], ["value", ["expression", "[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n]"]]], []], ["Chart", [["type", ["value", "line"]], ["data", ["variable", "dataToBeCharted"]]], []], ["caption", [], ["Cras tristique sed diam nec auctor elit."]]]]]], ["h1", [], ["Component: Aside"]], ["p", [], ["The ", ["code", [], ["aside"]], " component allows you to include information or graphcis in the sidebar. The code for that chart can be seen here:"]], ["pre", [], [["code", [], ["[var name:dataToBeCharted value:[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n] /]\n[Chart type:\"line\" data:dataToBeCharted /]"]]]], ["p", [], ["Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales."]], ["p", [], ["Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo."]], ["h1", [], ["Component: Chart"]], ["p", [], ["Basic charts are included out of the box like we saw in the aside above. Charts can also be included in the main body, like the scatter plot below.", ["Chart", [["type", ["value", "scatter"]], ["data", ["variable", "dataToBeCharted"]]], []]]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["p", [], ["Sed non ultricies felis, sed suscipit nisi. Duis vitae ipsum bibendum odio mollis pellentesque. Proin congue risus et metus faucibus, id auctor ligula congue. Integer blandit ligula a eros porta varius. Integer tincidunt tempus nunc, mollis tristique ligula pulvinar id. Phasellus at ornare lacus. Sed eget nunc hendrerit, accumsan nibh sit amet, laoreet nisi. In nisi nunc, vestibulum non elementum eget, faucibus vitae neque. Praesent a luctus purus. Nunc massa enim, facilisis sed nisl rutrum, consectetur efficitur quam. Aenean dolor lectus, eleifend non scelerisque quis, maximus id arcu. In aliquet ultrices ipsum eu ornare. Nullam eget nulla in augue feugiat dapibus. Suspendisse in nisi eros. Aliquam non blandit ex, id dapibus massa. Sed laoreet porttitor mauris eget rutrum."]], ["h1", [], ["Component: Equation"]], ["p", [], ["Mathematical equations can also be shown. These equations are powered by ", ["a", [["href", ["value", "https://github.com/Khan/KaTeX"]]], ["KaTeX"]], ", a modern alternative to LaTeX."]], ["h2", [], [["Equation", [], ["\n  y = \\int x^2 dx"]]]], ["p", [], ["Nam venenatis rutrum consequat. Praesent commodo, magna id rutrum cursus, nulla nulla porttitor sem, at tincidunt tortor massa id ante. Maecenas efficitur dignissim purus, quis convallis elit tincidunt quis. In porttitor nisl vel nunc mollis, sed aliquam metus semper. Nulla facilisi. Vestibulum mattis nunc non mauris finibus, a accumsan mi ornare. Nulla odio risus, efficitur sit amet hendrerit eget, accumsan ut leo. Aliquam consectetur efficitur condimentum. Vestibulum laoreet massa lectus, id sodales elit tempor eget. Ut pulvinar ante a tortor posuere, sed eleifend diam euismod."]], ["p", [], ["Even complex equations are supported."]], ["h2", [], [["Equation", [], ["\n    f(x) = \\int_{-\\infty}^\\infty\n    \\hat f(\\xi)\\,e^{2 \\pi i \\xi x}\n    \\,d\\xi"]]]], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse leo quam, rhoncus vel neque non, lacinia lobortis nibh. Aenean non nisl erat. Donec a pellentesque felis. Curabitur facilisis commodo quam, et feugiat elit ultrices non. Maecenas ornare urna ac facilisis vehicula. Donec fringilla libero ut eleifend commodo. Sed hendrerit, arcu sed vestibulum varius, sapien tortor molestie leo, at bibendum risus risus ut ipsum."]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["p", [], ["Phasellus laoreet ultrices interdum. Ut hendrerit arcu sed lectus tincidunt, in interdum elit porttitor. Nunc ac fringilla tellus. Pellentesque condimentum pellentesque iaculis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Sed ut quam placerat, luctus lorem at, tempus odio. Praesent et diam ullamcorper, aliquet ligula eu, mattis lacus. Cras gravida molestie neque non hendrerit. Aliquam porttitor magna nibh, ut accumsan ipsum tristique id. In vitae metus sed tellus tempus luctus faucibus sit amet elit."]]];
+module.exports = [["Header", [["title", ["value", "Component: Header"]], ["subtitle", ["value", "This title, subtitle, and byline are created using the code below"]], ["author", ["value", "Aristotle Jenkins"]], ["authorLink", ["value", "http://weirdal.com/"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim."]], ["pre", [], [["code", [], ["[Header\n  title:\"Component: Header\"\n  subtitle:\"This title, subtitle, and byline are created using the Header component\"\n  author:\"Aristotle Jenkins\"\n  authorLink:\"http://weirdal.com/\" /]"]]]], ["p", [], ["Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti."]], ["aside", [], [["div", [], [["var", [["name", ["expression", "dataToBeCharted"]], ["value", ["expression", "[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n]"]]], []], ["Chart", [["type", ["value", "line"]], ["data", ["variable", "dataToBeCharted"]]], []], ["caption", [], ["Cras tristique sed diam nec auctor elit."]]]]]], ["h1", [], ["Component: Aside"]], ["p", [], ["The ", ["code", [], ["aside"]], " component allows you to include information or graphcis in the sidebar. The code for that chart can be seen here:"]], ["pre", [], [["code", [], ["[var name:dataToBeCharted value:[\n  {x: 0, y: 0.5},\n  {x: 3.5, y: 0.5},\n  {x: 4, y: 0},\n  {x: 4.5, y: 1},\n  {x: 5, y: 0.5},\n  {x: 8, y: 0.5}\n] /]\n[Chart type:\"line\" data:dataToBeCharted /]"]]]], ["p", [], ["Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales."]], ["p", [], ["Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo."]], ["h1", [], ["Component: Chart"]], ["p", [], ["Basic charts are included out of the box like we saw in the aside above. Charts can also be included in the main body, like the scatter plot below.", ["Chart", [["type", ["value", "scatter"]], ["data", ["variable", "dataToBeCharted"]]], []]]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["p", [], ["Sed non ultricies felis, sed suscipit nisi. Duis vitae ipsum bibendum odio mollis pellentesque. Proin congue risus et metus faucibus, id auctor ligula congue. Integer blandit ligula a eros porta varius. Integer tincidunt tempus nunc, mollis tristique ligula pulvinar id. Phasellus at ornare lacus. Sed eget nunc hendrerit, accumsan nibh sit amet, laoreet nisi. In nisi nunc, vestibulum non elementum eget, faucibus vitae neque. Praesent a luctus purus. Nunc massa enim, facilisis sed nisl rutrum, consectetur efficitur quam. Aenean dolor lectus, eleifend non scelerisque quis, maximus id arcu. In aliquet ultrices ipsum eu ornare. Nullam eget nulla in augue feugiat dapibus. Suspendisse in nisi eros. Aliquam non blandit ex, id dapibus massa. Sed laoreet porttitor mauris eget rutrum."]], ["h1", [], ["Component: Equation"]], ["p", [], ["Mathematical equations can also be shown. These equations are powered by ", ["a", [["href", ["value", "https://github.com/Khan/KaTeX"]]], ["KaTeX"]], ", a modern alternative to LaTeX."]], ["h2", [], [["Equation", [], ["\n  y = \\int x^2 dx"]]]], ["p", [], ["Nam venenatis rutrum consequat. Praesent commodo, magna id rutrum cursus, nulla nulla porttitor sem, at tincidunt tortor massa id ante. Maecenas efficitur dignissim purus, quis convallis elit tincidunt quis. In porttitor nisl vel nunc mollis, sed aliquam metus semper. Nulla facilisi. Vestibulum mattis nunc non mauris finibus, a accumsan mi ornare. Nulla odio risus, efficitur sit amet hendrerit eget, accumsan ut leo. Aliquam consectetur efficitur condimentum. Vestibulum laoreet massa lectus, id sodales elit tempor eget. Ut pulvinar ante a tortor posuere, sed eleifend diam euismod."]], ["p", [], ["Even complex equations are supported."]], ["h2", [], [["Equation", [], ["\n    f(x) = \\int_{-\\infty}^\\infty\n    \\hat f(\\xi)\\,e^{2 \\pi i \\xi x}\n    \\,d\\xi"]]]], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse leo quam, rhoncus vel neque non, lacinia lobortis nibh. Aenean non nisl erat. Donec a pellentesque felis. Curabitur facilisis commodo quam, et feugiat elit ultrices non. Maecenas ornare urna ac facilisis vehicula. Donec fringilla libero ut eleifend commodo. Sed hendrerit, arcu sed vestibulum varius, sapien tortor molestie leo, at bibendum risus risus ut ipsum."]], ["p", [], ["Cras nec vestibulum leo. Etiam pellentesque facilisis arcu sit amet porta. In hac habitasse platea dictumst. Praesent in ornare ipsum, eu tincidunt arcu. Suspendisse id tortor tempus, molestie neque sed, ullamcorper massa. Nunc faucibus posuere nisl, vitae fringilla sem dictum sit amet. Phasellus in ex tristique, sollicitudin dolor a, sodales elit. Nunc a vulputate enim, vel aliquet ligula. In placerat est at dignissim rhoncus. Sed iaculis vel elit non pellentesque. In commodo imperdiet hendrerit. Curabitur aliquam suscipit finibus."]], ["h1", [], ["Component: SVG"]], ["p", [], ["You can display SVGs directly in your page."]], ["SVG", [["src", ["value", "/public/img/thumb.svg"]]], []], ["p", [], ["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam quis dolor sit amet nulla eleifend porta. Nunc nec nunc a erat commodo pellentesque. Maecenas iaculis ac urna ac viverra. Pellentesque consectetur rhoncus tempus. Integer eget velit at tellus scelerisque scelerisque quis vitae elit. Cras efficitur condimentum ipsum quis bibendum. Suspendisse porttitor rutrum lorem. Nullam vehicula ligula dolor, a blandit nisl gravida id. Phasellus et sem dignissim, lacinia nulla et, dignissim felis. Maecenas viverra quam eget quam dapibus, eget euismod urna maximus. Nam in pretium diam. Integer ornare laoreet justo. Mauris orci velit, tincidunt a consequat ut, sollicitudin nec leo. Sed ornare orci eros, volutpat venenatis dui ultrices eget. Etiam fringilla volutpat nulla, quis imperdiet urna scelerisque in. Ut neque nisi, placerat ut enim a, vehicula cursus tellus."]], ["p", [], ["Maecenas molestie diam in velit ornare faucibus. Nam vitae dignissim massa, vitae mollis nunc. Vivamus tempus, arcu vitae aliquet sollicitudin, dui ligula lacinia nulla, eu ultricies nisi lectus condimentum libero. Ut eleifend purus laoreet tincidunt elementum. Ut rutrum porttitor orci, id pellentesque quam posuere at. Morbi in lectus quis enim suscipit luctus. Integer elementum ultrices nisl, placerat dapibus purus cursus et. Etiam condimentum libero eget diam porta consequat. Praesent efficitur scelerisque pretium. Sed dapibus eget sapien ac placerat. Proin sit amet ligula felis. Nulla facilisi. Aenean et fringilla ligula, nec porttitor turpis."]], ["p", [], ["Fusce molestie blandit laoreet. Nam tincidunt dictum turpis vel suscipit. Cras quis convallis mi, eu facilisis justo. Nunc luctus, arcu tristique congue gravida, tortor diam condimentum nisi, in pharetra sapien dolor id dui. Quisque lectus odio, hendrerit ultrices ornare eu, rhoncus non augue. Nullam at porttitor mi, at luctus ipsum. Aenean vulputate augue sed nisl condimentum, non pharetra justo tincidunt. Nam ullamcorper interdum porta. In viverra felis nisl, vitae aliquet tellus facilisis sit amet. Quisque accumsan pretium tincidunt."]], ["p", [], ["Integer faucibus sapien in massa fringilla, semper eleifend dolor finibus. Cras volutpat fringilla nisl molestie suscipit. Quisque ac nisl sed ligula porttitor aliquam. Etiam vulputate sapien et fermentum sodales. Aliquam ante ex, euismod ac quam non, maximus varius libero. In sollicitudin turpis lectus, mollis elementum elit blandit eu. Ut consectetur odio sit amet odio aliquam pulvinar. Maecenas posuere, felis scelerisque eleifend dapibus, orci arcu dignissim nulla, a eleifend arcu elit in eros. Maecenas tristique imperdiet ante. Etiam orci risus, blandit ut fermentum sed, cursus ut dolor. Maecenas a porttitor ex. Donec vel libero in libero rhoncus placerat. Aliquam erat volutpat. Fusce efficitur consectetur felis, sit amet elementum libero volutpat a. Vivamus nec neque ullamcorper magna eleifend ullamcorper non a mi. Ut odio libero, aliquam ut convallis quis, pretium vel metus."]], ["p", [], ["Donec vitae dapibus nunc, a faucibus turpis. Suspendisse mattis diam id ante sagittis vestibulum. Fusce porttitor felis in arcu elementum, quis luctus lacus varius. Donec consectetur ultrices eros in interdum. Aliquam et eros sed turpis egestas congue ut tincidunt est. Curabitur sagittis nisi ac ex porta dignissim. Donec eget sollicitudin risus. Fusce mattis pellentesque felis, quis sagittis nulla vulputate convallis. Phasellus eu mollis nulla. Mauris commodo, odio sit amet dignissim maximus, ipsum ex bibendum est, vel tincidunt nisl libero vel ex. Fusce enim tellus, sodales eget odio sed, suscipit blandit urna. Nam aliquam bibendum tincidunt. Sed metus nulla, interdum eget cursus eu, rhoncus ut neque."]], ["p", [], ["Phasellus laoreet ultrices interdum. Ut hendrerit arcu sed lectus tincidunt, in interdum elit porttitor. Nunc ac fringilla tellus. Pellentesque condimentum pellentesque iaculis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Sed ut quam placerat, luctus lorem at, tempus odio. Praesent et diam ullamcorper, aliquet ligula eu, mattis lacus. Cras gravida molestie neque non hendrerit. Aliquam porttitor magna nibh, ut accumsan ipsum tristique id. In vitae metus sed tellus tempus luctus faucibus sit amet elit."]]];
 
 },{}],"__IDYLL_COMPONENTS__":[function(require,module,exports){
 'use strict';
@@ -61968,10 +63105,11 @@ module.exports = {
 	'header': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header'),
 	'aside': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside'),
 	'chart': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart'),
-	'equation': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation')
+	'equation': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation'),
+	'svg': require('/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg')
 };
 
-},{"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header.js"}],"__IDYLL_DATA__":[function(require,module,exports){
+},{"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/aside.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/chart.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/equation.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/header.js","/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg":"/Users/bclinkinbeard/Code/nciea/literasee/node_modules/idyll-default-components/svg.js"}],"__IDYLL_DATA__":[function(require,module,exports){
 "use strict";
 
 module.exports = {};
