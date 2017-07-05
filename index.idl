@@ -1,10 +1,18 @@
 [Header
-  title:"Nam ut ullamcorper diam"
-  subtitle:"Porro quisquam est qui dolorem ipsum quia dolor"
+  title:"Component: Header"
+  subtitle:"This title, subtitle, and byline are created using the code below"
   author:"Aristotle Jenkins"
   authorLink:"http://weirdal.com/" /]
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras luctus blandit lacus, eu pulvinar sem bibendum in. Vivamus sollicitudin magna ac tellus fermentum, sed vestibulum velit pulvinar. Fusce eget leo in nisi posuere aliquam. Nam vehicula leo diam, sed placerat urna pretium eu. Sed dignissim malesuada volutpat. Sed ultricies at libero eget ornare. Cras iaculis neque est. Nullam vel aliquet est, et aliquam enim.
+
+```
+[Header
+  title:"Component: Header"
+  subtitle:"This title, subtitle, and byline are created using the Header component"
+  author:"Aristotle Jenkins"
+  authorLink:"http://weirdal.com/" /]
+```
 
 Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidunt vitae. Mauris mollis erat nisi. Sed nec eros dolor. Cras ut aliquam diam. In hac habitasse platea dictumst. In sagittis libero vel sapien sodales eleifend quis nec dui. Quisque vulputate, justo sit amet aliquam facilisis, purus risus fermentum mi, dapibus sodales felis est vitae sapien. Ut mattis, mi vitae tincidunt fringilla, magna urna congue augue, at aliquet turpis sapien nec nibh. Etiam sit amet faucibus nisl. Suspendisse potenti.
 
@@ -22,7 +30,21 @@ Nam ut ullamcorper diam. Mauris placerat sem ante, pulvinar viverra odio tincidu
 [/aside]
 
 # Component: Aside
-The `aside` component allows you to include information or graphcis in the sidebar. Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales.
+The `aside` component allows you to include information or graphcis in the sidebar. The code for that chart can be seen here:
+
+```
+[var name:dataToBeCharted value:[
+  {x: 0, y: 0.5},
+  {x: 3.5, y: 0.5},
+  {x: 4, y: 0},
+  {x: 4.5, y: 1},
+  {x: 5, y: 0.5},
+  {x: 8, y: 0.5}
+] /]
+[Chart type:"line" data:dataToBeCharted /]
+```
+
+Donec non orci a arcu ultrices mollis non porttitor elit. Maecenas id orci ultrices, dictum erat ut, ullamcorper ante. Vivamus vehicula ante ex, id sodales metus euismod nec. Quisque egestas tortor tellus, at rutrum risus blandit sit amet. Donec pellentesque vehicula mi id eleifend. Donec ac vestibulum nisl. Cras sodales ut est non porttitor. Sed lacus mi, sagittis et scelerisque vitae, ornare vitae mauris. Curabitur faucibus erat ut purus ultrices, lacinia tempus magna ullamcorper. Praesent id suscipit elit. Praesent elementum tellus non ultrices sodales.
 
 Fusce tellus turpis, auctor luctus neque eu, pretium semper lacus. Nam tempus nunc sed laoreet volutpat. Sed rhoncus diam ac suscipit dignissim. Quisque neque arcu, finibus vitae mattis et, lacinia eget ex. Pellentesque risus dolor, tristique varius lacus vitae, tincidunt efficitur quam. Curabitur commodo nunc turpis, in sagittis dui mattis eget. Praesent urna purus, venenatis a orci nec, tempus tincidunt sapien. Nam bibendum nibh velit, facilisis vehicula dolor condimentum quis. Fusce sed arcu at enim aliquet fermentum eu vulputate erat. Maecenas tristique, lorem ac consectetur pretium, tellus lacus faucibus erat, quis viverra quam urna non turpis. Ut ut consequat dui, nec molestie diam. Aliquam nisi risus, aliquam tempor diam in, tristique placerat justo.
 
