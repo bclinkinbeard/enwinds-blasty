@@ -1,6 +1,6 @@
-const React, { Component } = require('react');
+const React = require('react');
 
-class Logo extends Component {
+class Logo extends React.Component {
   render() {
     return (
       <div className="logo-lockup">
