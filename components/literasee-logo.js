@@ -1,7 +1,6 @@
-const React = require('react');
-const IdyllComponent = require('idyll-component');
+const React, { Component } = require('react');
 
-class Logo extends IdyllComponent {
+class Logo extends Component {
   render() {
     return (
       <div className="logo-lockup">
