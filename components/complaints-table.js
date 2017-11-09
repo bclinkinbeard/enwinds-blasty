@@ -1,10 +1,10 @@
-const React, { Component } = require('react');
+const React = require('react');
 const Reactable = require('reactable');
 const Table = Reactable.Table;
 const Tr = Reactable.Tr;
 const Td = Reactable.Td;
 
-class TableComponent extends Component {
+class TableComponent extends React.Component {
   render() {
     const data = this.props.data.map((d) => {
       return {
