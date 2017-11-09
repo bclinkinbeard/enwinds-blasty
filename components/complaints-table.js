@@ -1,11 +1,10 @@
-const React = require('react');
-const IdyllComponent = require('idyll-component');
+const React, { Component } = require('react');
 const Reactable = require('reactable');
 const Table = Reactable.Table;
 const Tr = Reactable.Tr;
 const Td = Reactable.Td;
 
-class TableComponent extends IdyllComponent {
+class TableComponent extends Component {
   render() {
     const data = this.props.data.map((d) => {
       return {
